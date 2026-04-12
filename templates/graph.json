@@ -1,0 +1,30 @@
+{
+  "collapse-filter": true,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    { "query": "tag:#type/spine", "color": { "a": 1, "rgb": 3381759 } },
+    { "query": "tag:#type/fix", "color": { "a": 1, "rgb": 14495282 } },
+    { "query": "tag:#type/feature", "color": { "a": 1, "rgb": 4439473 } },
+    { "query": "tag:#type/architecture", "color": { "a": 1, "rgb": 10170623 } },
+    { "query": "tag:#type/plan", "color": { "a": 1, "rgb": 16750848 } },
+    { "query": "tag:#type/decision", "color": { "a": 1, "rgb": 16776960 } },
+    { "query": "tag:#type/meta", "color": { "a": 1, "rgb": 10066329 } }
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.5,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 1.6,
+  "close": true
+}

@@ -1,0 +1,21 @@
+{
+  "name": "spine",
+  "version": "0.1.0",
+  "description": "A self-developing knowledge management system for Claude Code. Bridges AI memory to an Obsidian vault with feature-organized spine notes, auto-capture skills, and color-coded graph visualization.",
+  "author": {
+    "name": "Nodewarrior",
+    "url": "https://github.com/Nodewarrior"
+  },
+  "homepage": "https://github.com/Nodewarrior/spine",
+  "repository": "https://github.com/Nodewarrior/spine",
+  "license": "MIT",
+  "keywords": [
+    "obsidian",
+    "knowledge-management",
+    "documentation",
+    "spine",
+    "memory",
+    "claude-code",
+    "vault"
+  ]
+}

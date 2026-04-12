@@ -1,0 +1,36 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "spine",
+  "description": "A self-developing knowledge management system for Claude Code.",
+  "owner": {
+    "name": "Nodewarrior"
+  },
+  "plugins": [
+    {
+      "name": "spine",
+      "source": "./",
+      "description": "Persistent, structured knowledge for Claude Code agents. Obsidian vault + auto-capture + color-coded graph.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Nodewarrior"
+      },
+      "homepage": "https://github.com/Nodewarrior/spine",
+      "repository": "https://github.com/Nodewarrior/spine",
+      "license": "MIT",
+      "keywords": [
+        "obsidian",
+        "knowledge-management",
+        "spine",
+        "memory",
+        "claude-code"
+      ],
+      "category": "workflow",
+      "tags": [
+        "knowledge-management",
+        "obsidian",
+        "documentation",
+        "memory"
+      ]
+    }
+  ]
+}

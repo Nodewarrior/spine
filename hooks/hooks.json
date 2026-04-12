@@ -1,0 +1,14 @@
+{
+  "hooks": [
+    {
+      "type": "PostToolUse",
+      "matcher": "Bash(git commit*)",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash \"$PLUGIN_DIR/hooks/spine-commit-check.sh\""
+        }
+      ]
+    }
+  ]
+}
