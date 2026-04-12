@@ -174,7 +174,7 @@ The AI's job: everything else.
 - [ ] Tier 3 curator agent — autonomous vault maintenance (autoResearch-inspired)
 - [ ] `/spine-search` — full-text search across the vault
 - [ ] Cross-vault discovery — find related concepts across multiple vaults
-- [ ] Cloud sync — optional cloud integration for cross-machine persistence
+- [ ] Cloud sync — integration for cross-machine persistence
 
 ## License
 
