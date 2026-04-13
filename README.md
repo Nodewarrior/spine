@@ -55,7 +55,8 @@ The vault gets richer with every commit. The richer it gets, the better Claude p
 ## Install
 
 ```bash
-claude plugin add github:Nodewarrior/spine
+claude plugin marketplace add Nodewarrior/spine
+claude plugin install spine
 ```
 
 Then inside Claude Code:
@@ -72,7 +73,8 @@ This creates your vault, sets up the Obsidian graph colors, and scaffolds the fi
 
 ```bash
 # 1. Install the plugin
-claude plugin add github:Nodewarrior/spine
+claude plugin marketplace add Nodewarrior/spine
+claude plugin install spine
 
 # 2. Initialize your vault
 # In Claude Code:
