@@ -1,7 +1,7 @@
 #!/bin/bash
 # Spine Architecture — post-commit hook
-# Silently records significant commits to {vault}/.spine/pending-commits.json.
-# No output is ever produced. Exits 0 always.
+# Tier 3 (tier3: true):  Silently tracks commits to pending-commits.json for batch capture.
+# Tier 1/2 (tier3: false): Prints a nudge suggesting /spine-capture. Default behavior.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -23,6 +23,20 @@ fi
 if [ ! -d "$VAULT_PATH/$REPO_NAME" ]; then
   exit 0
 fi
+
+# Check tier3 flag from ~/.spine/config.json (default: false)
+TIER3_ENABLED=false
+if [ -f "$HOME/.spine/config.json" ]; then
+  if command -v python3 &>/dev/null; then
+    TIER3_ENABLED=$(python3 -c "import json; print(json.load(open('$HOME/.spine/config.json')).get('tier3', False))" 2>/dev/null || echo "false")
+  elif command -v node &>/dev/null; then
+    TIER3_ENABLED=$(node -e "console.log(require('$HOME/.spine/config.json').tier3 || false)" 2>/dev/null || echo "false")
+  elif command -v jq &>/dev/null; then
+    TIER3_ENABLED=$(jq -r '.tier3 // false' "$HOME/.spine/config.json" 2>/dev/null || echo "false")
+  fi
+fi
+# Normalize to lowercase
+TIER3_ENABLED="${TIER3_ENABLED,,}"
 
 # Gather commit metadata in a single git call
 IFS=$'\x01' read -r COMMIT_HASH COMMIT_MSG COMMIT_TIMESTAMP \
@@ -54,6 +68,14 @@ fi
 if [[ "$MSG_LOWER" =~ ^(style|lint|chore|docs)(\(.*\))?[:/!\ ] ]]; then
   exit 0
 fi
+
+# Tier 3 off: nudge the user and exit (Tier 1/2 behavior)
+if [[ "$TIER3_ENABLED" != "true" ]]; then
+  echo "SPINE: Commit \"$COMMIT_MSG\" changed $CHANGED_FILES_COUNT files (+$INSERTIONS/-$DELETIONS). Consider running /spine-capture to document this work."
+  exit 0
+fi
+
+# --- Tier 3: silent tracking below this line ---
 
 # Ensure .spine directory exists in vault
 mkdir -p "$VAULT_PATH/.spine" 2>/dev/null

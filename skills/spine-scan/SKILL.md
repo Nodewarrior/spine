@@ -7,6 +7,15 @@ description: Session-start vault scanner. Auto-fixes broken wikilinks, missing t
 
 Automatically scan the Spine vault for decay and coverage gaps. Auto-fixes low-risk issues, reports findings as a non-blocking banner.
 
+## Tier 3 Gate
+
+Before doing anything, check if Tier 3 is enabled:
+1. Read `~/.spine/config.json`
+2. Check the `tier3` field
+3. If `tier3` is `false` or missing, **skip silently** — do not scan, do not print a banner, do nothing.
+
+This skill only runs when the user has opted into Tier 3 autonomous behavior.
+
 ## Vault Path Resolution
 
 Resolve the vault path using this config chain:

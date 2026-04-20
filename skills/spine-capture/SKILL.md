@@ -130,6 +130,13 @@ Report findings briefly — don't act without user approval.
 
 When invoked with `$ARGUMENTS` equal to `--batch`, switch to batch capture mode. This is typically triggered automatically by the Stop hook at session end.
 
+### Tier 3 Gate
+
+Before proceeding, check if Tier 3 is enabled:
+1. Read `~/.spine/config.json`
+2. Check the `tier3` field
+3. If `tier3` is `false` or missing, **skip silently** — batch mode requires Tier 3.
+
 ### Batch Step 1: Read Pending Commits
 
 1. Resolve vault path (same config chain as above)
