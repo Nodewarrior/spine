@@ -6,7 +6,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/spine-commit-check.sh\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/spine-commit-tracker.sh\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "skill",
+            "skill": "spine-scan"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "skill",
+            "skill": "spine-capture",
+            "args": "--batch"
           }
         ]
       }
