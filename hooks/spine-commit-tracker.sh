@@ -24,20 +24,21 @@ if [ ! -d "$VAULT_PATH/$REPO_NAME" ]; then
   exit 0
 fi
 
-# Gather commit stats
-COMMIT_HASH=$(git log -1 --pretty=%h 2>/dev/null)
-COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null)
-COMMIT_TIMESTAMP=$(git log -1 --pretty=%aI 2>/dev/null)
+# Gather commit metadata in a single git call
+IFS=$'\x01' read -r COMMIT_HASH COMMIT_MSG COMMIT_TIMESTAMP \
+  < <(git log -1 --pretty="%h%x01%s%x01%aI" 2>/dev/null)
 
 # Use diff-tree --numstat for reliable stats. Handle initial commits via empty tree.
 EMPTY_TREE="4b825dc642cb6eb9a060e54bf899d15363da7b23"
 PARENT=$(git rev-parse --verify HEAD~1 2>/dev/null || echo "$EMPTY_TREE")
 NUMSTAT=$(git diff-tree --numstat --no-commit-id -r "$PARENT" HEAD 2>/dev/null)
 
-FILES_CHANGED=$(echo "$NUMSTAT" | awk '{print $3}' | grep -v '^$')
-CHANGED_FILES_COUNT=$(echo "$FILES_CHANGED" | grep -c . 2>/dev/null || echo 0)
-INSERTIONS=$(echo "$NUMSTAT" | awk '{s+=$1} END{print s+0}')
-DELETIONS=$(echo "$NUMSTAT" | awk '{s+=$2} END{print s+0}')
+# Extract all stats in a single awk pass
+eval "$(echo "$NUMSTAT" | awk '
+  $3 != "" { files = files (files ? "\n" : "") $3; ins += $1; del += $2; cnt++ }
+  END { printf "INSERTIONS=%d\nDELETIONS=%d\nCHANGED_FILES_COUNT=%d\n", ins, del, cnt }
+')"
+FILES_CHANGED=$(echo "$NUMSTAT" | awk '$3 != "" {print $3}')
 TOTAL_CHANGES=$((INSERTIONS + DELETIONS))
 
 # Skip trivial commits (less than 20 lines changed AND only 1 file)
@@ -45,13 +46,12 @@ if [ "$TOTAL_CHANGES" -lt 20 ] && [ "$CHANGED_FILES_COUNT" -le 1 ]; then
   exit 0
 fi
 
-# Skip merge commits
-if echo "$COMMIT_MSG" | grep -qiE '^merge'; then
+# Skip merge and trivial-category commits using bash built-in regex (no subprocesses)
+MSG_LOWER="${COMMIT_MSG,,}"
+if [[ "$MSG_LOWER" =~ ^merge ]]; then
   exit 0
 fi
-
-# Skip style/lint/chore/docs commits (with or without colon)
-if echo "$COMMIT_MSG" | grep -qiE '^(style|lint|chore|docs)(\(.*\))?[:/! ]'; then
+if [[ "$MSG_LOWER" =~ ^(style|lint|chore|docs)(\(.*\))?[:/!\ ] ]]; then
   exit 0
 fi
 
@@ -62,15 +62,16 @@ PENDING_FILE="$VAULT_PATH/.spine/pending-commits.json"
 LOCK_FILE="$VAULT_PATH/.spine/pending-commits.lock"
 
 # Acquire file lock to prevent concurrent write races.
-# flock is available on macOS 13+ and all Linux. If unavailable, proceed without lock.
+# flock is native on Linux; on macOS requires brew install util-linux. Falls back gracefully.
 LOCK_FD=9
 if command -v flock &>/dev/null; then
   exec 9>"$LOCK_FILE"
   flock -w 5 9 2>/dev/null || exit 0
 fi
 
-# Build the new commit entry and append it to pending-commits.json.
-# Try python3 first, then node, then jq, then fallback to fresh file.
+# Append commit entry to pending-commits.json using a fallback ladder.
+# Why: Spine has zero dependencies, so we can't assume any runtime is available.
+# python3 and node handle JSON natively; jq is a lightweight fallback; raw bash is last resort.
 if command -v python3 &>/dev/null; then
   python3 - "$PENDING_FILE" "$COMMIT_HASH" "$COMMIT_MSG" "$COMMIT_TIMESTAMP" "$REPO_NAME" \
     "$INSERTIONS" "$DELETIONS" "$FILES_CHANGED" <<'PYEOF' 2>/dev/null
@@ -184,13 +185,19 @@ if command -v jq &>/dev/null; then
   if [ -f "$PENDING_FILE" ]; then
     UPDATED=$(jq --argjson entry "$NEW_ENTRY" '.commits += [$entry]' "$PENDING_FILE" 2>/dev/null)
     if [ $? -eq 0 ]; then
-      echo "$UPDATED" > "$PENDING_FILE" 2>/dev/null
+      # Atomic write via temp file
+      TMP_JQ="$PENDING_FILE.tmp.$$"
+      echo "$UPDATED" > "$TMP_JQ" 2>/dev/null && mv "$TMP_JQ" "$PENDING_FILE" 2>/dev/null
       exit 0
+    else
+      # Preserve corrupt file for recovery
+      cp "$PENDING_FILE" "$PENDING_FILE.corrupt.$(date +%Y%m%d%H%M%S)" 2>/dev/null
     fi
   fi
 
-  # File doesn't exist or jq failed — write fresh
-  jq -n --argjson entry "$NEW_ENTRY" '{commits:[$entry]}' > "$PENDING_FILE" 2>/dev/null
+  # File doesn't exist or was corrupt — write fresh via atomic rename
+  TMP_JQ="$PENDING_FILE.tmp.$$"
+  jq -n --argjson entry "$NEW_ENTRY" '{commits:[$entry]}' > "$TMP_JQ" 2>/dev/null && mv "$TMP_JQ" "$PENDING_FILE" 2>/dev/null
   exit 0
 fi
 
