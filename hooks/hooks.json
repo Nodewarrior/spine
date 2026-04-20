@@ -15,8 +15,9 @@
       {
         "hooks": [
           {
-            "type": "skill",
-            "skill": "spine-scan"
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/spine-session-start.sh\"",
+            "async": false
           }
         ]
       }
@@ -25,9 +26,9 @@
       {
         "hooks": [
           {
-            "type": "skill",
-            "skill": "spine-capture",
-            "args": "--batch"
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/spine-session-stop.sh\"",
+            "async": false
           }
         ]
       }
