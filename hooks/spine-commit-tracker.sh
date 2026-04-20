@@ -28,13 +28,16 @@ fi
 COMMIT_HASH=$(git log -1 --pretty=%h 2>/dev/null)
 COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null)
 COMMIT_TIMESTAMP=$(git log -1 --pretty=%aI 2>/dev/null)
-FILES_CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null)
-CHANGED_FILES_COUNT=$(echo "$FILES_CHANGED" | grep -c . 2>/dev/null || echo 0)
-INSERTIONS=$(git diff --stat HEAD~1 HEAD 2>/dev/null | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+')
-DELETIONS=$(git diff --stat HEAD~1 HEAD 2>/dev/null | tail -1 | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+')
 
-INSERTIONS=${INSERTIONS:-0}
-DELETIONS=${DELETIONS:-0}
+# Use diff-tree --numstat for reliable stats. Handle initial commits via empty tree.
+EMPTY_TREE="4b825dc642cb6eb9a060e54bf899d15363da7b23"
+PARENT=$(git rev-parse --verify HEAD~1 2>/dev/null || echo "$EMPTY_TREE")
+NUMSTAT=$(git diff-tree --numstat --no-commit-id -r "$PARENT" HEAD 2>/dev/null)
+
+FILES_CHANGED=$(echo "$NUMSTAT" | awk '{print $3}' | grep -v '^$')
+CHANGED_FILES_COUNT=$(echo "$FILES_CHANGED" | grep -c . 2>/dev/null || echo 0)
+INSERTIONS=$(echo "$NUMSTAT" | awk '{s+=$1} END{print s+0}')
+DELETIONS=$(echo "$NUMSTAT" | awk '{s+=$2} END{print s+0}')
 TOTAL_CHANGES=$((INSERTIONS + DELETIONS))
 
 # Skip trivial commits (less than 20 lines changed AND only 1 file)
@@ -47,8 +50,8 @@ if echo "$COMMIT_MSG" | grep -qiE '^merge'; then
   exit 0
 fi
 
-# Skip style/lint/chore/docs commits
-if echo "$COMMIT_MSG" | grep -qiE '^(style|lint|chore|docs):'; then
+# Skip style/lint/chore/docs commits (with or without colon)
+if echo "$COMMIT_MSG" | grep -qiE '^(style|lint|chore|docs)(\(.*\))?[:/! ]'; then
   exit 0
 fi
 
@@ -191,7 +194,10 @@ if command -v jq &>/dev/null; then
   exit 0
 fi
 
-# Fallback: no JSON tool available — write a fresh single-entry file
+# Fallback: no JSON tool available — write a fresh single-entry file.
+# Escape special characters in commit message for valid JSON.
+ESCAPED_MSG=$(printf '%s' "$COMMIT_MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' ' ')
+
 FILES_JSON_ARRAY="[]"
 if [ -n "$FILES_CHANGED" ]; then
   FILES_JSON_ARRAY=$(printf '%s\n' "$FILES_CHANGED" | awk 'BEGIN{printf "["} NR>1{printf ","} {gsub(/"/,"\\\""); printf "\"%s\"",$0} END{printf "]"}')
@@ -202,7 +208,7 @@ cat > "$PENDING_FILE" 2>/dev/null <<JSONEOF
   "commits": [
     {
       "hash": "$COMMIT_HASH",
-      "message": "$COMMIT_MSG",
+      "message": "$ESCAPED_MSG",
       "files": $FILES_JSON_ARRAY,
       "insertions": $INSERTIONS,
       "deletions": $DELETIONS,
