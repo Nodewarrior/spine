@@ -124,6 +124,20 @@ Examples:
 
 If there are zero commits and zero issues, either print `🦴 Spine: Vault is clean.` or skip the banner entirely.
 
+### Health Check Reminder
+
+Check `{vault}/.spine/last-health-timestamp`. If the file doesn't exist or the timestamp is older than 14 days, append a reminder to the banner:
+
+```
+   Last full health check: {N} days ago — consider running /spine-health.
+```
+
+Examples with the reminder:
+- `🦴 Spine: Vault is clean. Last full health check: 18 days ago — consider running /spine-health.`
+- `🦴 Spine: 2 wikilinks fixed (auto). 1 coverage gap (auth). Last full health check: 21 days ago — consider running /spine-health.`
+
+If the last health check was within 14 days, do not mention it.
+
 ## Phase 4: Update Timestamp
 
 Write the current ISO timestamp to `{vault}/.spine/last-scan-timestamp`:
