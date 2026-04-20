@@ -56,6 +56,15 @@ fi
 mkdir -p "$VAULT_PATH/.spine" 2>/dev/null
 
 PENDING_FILE="$VAULT_PATH/.spine/pending-commits.json"
+LOCK_FILE="$VAULT_PATH/.spine/pending-commits.lock"
+
+# Acquire file lock to prevent concurrent write races.
+# flock is available on macOS 13+ and all Linux. If unavailable, proceed without lock.
+LOCK_FD=9
+if command -v flock &>/dev/null; then
+  exec 9>"$LOCK_FILE"
+  flock -w 5 9 2>/dev/null || exit 0
+fi
 
 # Build the new commit entry and append it to pending-commits.json.
 # Try python3 first, then node, then jq, then fallback to fresh file.
@@ -85,21 +94,30 @@ entry = {
     "repo":       repo,
 }
 
-# Read existing data or start fresh
+# Read existing data; preserve corrupt files instead of silently resetting
 data = {"commits": []}
 if os.path.isfile(pending_file):
     try:
         with open(pending_file, "r") as fh:
             data = json.load(fh)
         if not isinstance(data, dict) or "commits" not in data:
-            data = {"commits": []}
+            raise ValueError("malformed pending-commits.json")
     except Exception:
+        # Preserve corrupt file for recovery instead of losing tracked commits
+        import shutil, datetime
+        corrupt_name = pending_file + ".corrupt." + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        shutil.copy2(pending_file, corrupt_name)
         data = {"commits": []}
 
 data["commits"].append(entry)
 
-with open(pending_file, "w") as fh:
+# Atomic write: write to temp file then rename to prevent partial writes
+import tempfile
+dir_name = os.path.dirname(pending_file)
+fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
+with os.fdopen(fd, "w") as fh:
     json.dump(data, fh, indent=2)
+os.replace(tmp_path, pending_file)
 PYEOF
   exit 0
 fi
@@ -126,14 +144,22 @@ let data = { commits: [] };
 if (fs.existsSync(pendingFile)) {
   try {
     const parsed = JSON.parse(fs.readFileSync(pendingFile, 'utf8'));
-    if (parsed && Array.isArray(parsed.commits)) {
-      data = parsed;
+    if (!parsed || !Array.isArray(parsed.commits)) {
+      throw new Error('malformed');
     }
-  } catch (_) {}
+    data = parsed;
+  } catch (_) {
+    // Preserve corrupt file for recovery
+    const ts = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+    fs.copyFileSync(pendingFile, pendingFile + '.corrupt.' + ts);
+  }
 }
 
 data.commits.push(entry);
-fs.writeFileSync(pendingFile, JSON.stringify(data, null, 2));
+// Atomic write: write to temp file then rename
+const tmpFile = pendingFile + '.tmp.' + process.pid;
+fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2));
+fs.renameSync(tmpFile, pendingFile);
 JSEOF
   exit 0
 fi
