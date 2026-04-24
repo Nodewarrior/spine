@@ -78,13 +78,25 @@ For each feature folder in `{vault}/{repo}/`:
    - `type/decision` → `## Decisions`
 5. Log: `**Auto-fixed:** Orphan doc \`{filename}\` linked into \`{spine-note}\``
 
-### 1d. Stale Doc Detection
+### 1d. Stale and Obsolete Doc Detection
 
 For each doc in `{vault}/{repo}/` that has a `**Files changed:**` section:
 1. Extract the file paths listed
-2. For each file path, run: `git log --oneline --since="{doc-date}" -- {filepath}`
-3. If the file has 3+ commits since the doc was written, add or update a `stale: true` field in the frontmatter
-4. Log: `**Flagged stale:** \`{doc}\` — \`{filepath}\` has {N} commits since doc date`
+2. For each file path, run existence check first:
+   ```bash
+   git ls-files -- {filepath}
+   ```
+   - If the command returns **empty**, the file no longer exists in the repo
+3. Classify the doc based on results:
+   - **All referenced files missing** → the feature was likely removed. Set `obsolete: true` in frontmatter. Do NOT also set `stale`.
+   - **Some referenced files missing** → partial removal. Set `stale: true` and add a `removed_files` list to frontmatter.
+   - **All files exist** → run activity check: `git log --oneline --since="{doc-date}" -- {filepath}`. If 3+ commits, set `stale: true`.
+4. Log accordingly:
+   - `**Flagged obsolete:** \`{doc}\` — all referenced files removed from repo (feature likely deleted)`
+   - `**Flagged stale:** \`{doc}\` — \`{filepath}\` removed from repo (partial)`
+   - `**Flagged stale:** \`{doc}\` — \`{filepath}\` has {N} commits since doc date`
+
+**Important:** Never auto-delete or archive obsolete docs — only flag them. The user decides what to do.
 
 ## Phase 2: Coverage Gap Detection
 
@@ -117,10 +129,16 @@ Format:
 🦴 Spine: {N} commits since last session — {fixes summary} (auto). {gaps summary}.
 ```
 
+Include obsolete/stale flags in the summary if any were found:
+- Obsolete docs (all files removed): mention by name — user should review these
+- Stale docs (high activity or partial removal): count only, don't list names
+
 Examples:
 - `🦴 Spine: 5 commits since last session — 2 wikilinks fixed, 1 tag corrected (auto). 2 coverage gaps (auth, payments). Run /spine-capture when ready.`
 - `🦴 Spine: No new commits. 1 orphan doc linked (auto). Vault is healthy.`
 - `🦴 Spine: 3 commits since last session. No issues found. Vault is clean.`
+- `🦴 Spine: 4 commits — 1 doc flagged obsolete (TradeIn feature removed?): \`2026-03-12 Feature - TradeIn Flow.md\`. Review with /spine-health.`
+- `🦴 Spine: 2 commits — 2 docs flagged stale. Vault mostly healthy.`
 
 If there are zero commits and zero issues, either print `🦴 Spine: Vault is clean.` or skip the banner entirely.
 
@@ -152,6 +170,7 @@ Append a dated section to `{vault}/.spine/curator-log.md` (create the file from 
 ```markdown
 ## {YYYY-MM-DD} — Session Scan
 - **Auto-fixed:** {description of each fix}
+- **Flagged obsolete:** `{doc}` — all referenced files removed from repo (feature likely deleted)
 - **Flagged stale:** {description of each stale doc}
 - **Coverage gap:** {description of each gap}
 ```
