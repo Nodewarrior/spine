@@ -26,9 +26,13 @@ Check if the path already contains an Obsidian vault (`.obsidian/` directory) or
 ## Step 2a: Fresh Vault Mode
 
 1. Create the vault root directory at the chosen path
-2. Create `~/.spine/config.json`:
+2. Ask the user: **"Enable Tier 3 autonomous mode?"**
+   Explain briefly: "Tier 3 adds session-start scanning, silent commit tracking, and batch capture at session end. You can change this anytime in `~/.spine/config.json`."
+   - If yes → `tier3: true`
+   - If no (default) → `tier3: false`
+3. Create `~/.spine/config.json`:
    ```json
-   { "vaultPath": "/absolute/path/to/vault" }
+   { "vaultPath": "/absolute/path/to/vault", "tier3": false }
    ```
 3. Create `.obsidian/graph.json` with color groups:
    ```json

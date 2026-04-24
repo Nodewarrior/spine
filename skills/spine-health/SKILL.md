@@ -112,3 +112,7 @@ Present a summary table:
 Then list each issue with a suggested action. Do NOT auto-fix — present findings and let the user decide.
 
 If user approves fixes, use `/spine-capture` for new docs, and direct edits for spine note / tag updates.
+
+## Update Health Timestamp
+
+After presenting the report, write the current ISO timestamp to `{vault}/.spine/last-health-timestamp`. This lets `/spine-scan` know when the last full health check was run and remind the user when it's been too long (14+ days).

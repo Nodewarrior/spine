@@ -47,8 +47,12 @@ Spine doesn't just store knowledge — it grows itself:
 
 - **`/spine-capture`** — After you complete work, this skill auto-drafts an Obsidian doc from your commits. Detects the repo, matches the feature, applies the naming conventions, updates the spine note with wikilinks. You review and approve.
 - **`/spine-health`** — On-demand vault audit. Finds undocumented commits, stale docs, duplicate notes, broken wikilinks, missing tags, and memory sync issues.
-- **Post-commit hook** — After significant commits (20+ lines, 2+ files), nudges you to run `/spine-capture`.
+- **Post-commit hook** — After significant commits (20+ lines, 2+ files), silently tracks them for batch capture at session end.
 - **Status line** — Optional bone avatar (`🦴`) showing vault activity in your Claude Code status bar.
+- **Session-start scanner** — `/spine-scan` runs automatically when you open Claude Code. Auto-fixes broken wikilinks, missing tags, and orphan docs. Detects undocumented commits and reports them in a non-blocking banner.
+- **Silent commit tracking** — Every significant commit is tracked automatically. No nudges, no noise.
+- **Batch capture** — At session end, `/spine-capture --batch` groups all tracked commits by feature, drafts docs, and presents them for your approval.
+- **Curator log** — Every auto-action is recorded in `{vault}/.spine/curator-log.md` for full transparency.
 
 The vault gets richer with every commit. The richer it gets, the better Claude performs on your codebase. Compound interest for engineering knowledge.
 
@@ -132,18 +136,20 @@ spine/
 ├── .claude-plugin/          # Plugin metadata
 ├── skills/
 │   ├── spine-init/          # Vault setup wizard
-│   ├── spine-capture/       # Auto-draft docs from commits
-│   └── spine-health/        # Vault audit and curation
+│   ├── spine-capture/       # Auto-draft docs (+ batch mode)
+│   ├── spine-health/        # Vault audit and curation
+│   └── spine-scan/          # Session-start scanner (Tier 3)
 ├── hooks/
-│   ├── hooks.json           # Post-commit hook config
-│   ├── spine-commit-check.sh
-│   └── spine-resolve-vault.sh
-├── templates/               # Vault templates (used by spine-init)
+│   ├── hooks.json           # SessionStart + PostToolUse + Stop hooks
+│   ├── spine-commit-tracker.sh  # Silent commit tracker
+│   └── spine-resolve-vault.sh   # Vault path resolver
+├── templates/               # Vault templates
 ├── scripts/
 │   └── statusline-spine.sh  # Optional status line segment
 └── docs/
     ├── conventions.md       # Full naming and tagging reference
-    └── status-line.md       # Status line setup guide
+    ├── status-line.md       # Status line setup guide
+    └── specs/               # Design specs
 ```
 
 ## Philosophy
@@ -170,10 +176,10 @@ The AI's job: everything else.
 - [x] `/spine-init` — vault setup with fresh and adopt modes
 - [x] `/spine-capture` — auto-draft docs from commits
 - [x] `/spine-health` — vault audit (6 checks)
-- [x] Post-commit hook — nudge after significant commits
+- [x] Post-commit hook — silent tracking + batch capture at session end
 - [x] Graph colors — type tags with Obsidian color groups
 - [x] Status line — bone avatar with vault activity
-- [ ] Tier 3 curator agent — autonomous vault maintenance (autoResearch-inspired)
+- [x] Tier 3 curator — self-maintaining vault with session-start scanning, silent commit tracking, and batch capture
 - [ ] `/spine-search` — full-text search across the vault
 - [ ] Cross-vault discovery — find related concepts across multiple vaults
 - [ ] Cloud sync — integration for cross-machine persistence

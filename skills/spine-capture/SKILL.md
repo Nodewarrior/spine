@@ -1,7 +1,7 @@
 ---
 name: spine-capture
-description: Capture completed work (fix, feature, architecture decision, plan) as an Obsidian doc in the Spine Architecture vault. Auto-detects repo, feature, and doc type from context.
-argument-hint: [optional: description of what to capture]
+description: Capture completed work (fix, feature, architecture decision, plan) as an Obsidian doc in the Spine Architecture vault. Auto-detects repo, feature, and doc type from context. Supports --batch mode for session-end batch capture.
+argument-hint: [optional: description or --batch for session-end batch mode]
 ---
 
 # Spine Capture — Document Work to Obsidian Vault
@@ -123,3 +123,93 @@ After saving, quickly scan the feature's existing docs:
 - Are any existing docs referencing files that have changed significantly? Flag as potentially stale
 
 Report findings briefly — don't act without user approval.
+
+---
+
+## Batch Mode (`--batch`)
+
+When invoked with `$ARGUMENTS` equal to `--batch`, switch to batch capture mode. This is typically triggered automatically by the Stop hook at session end.
+
+### Tier 3 Gate
+
+Before proceeding, check if Tier 3 is enabled:
+1. Read `~/.spine/config.json`
+2. Check the `tier3` field
+3. If `tier3` is `false` or missing, **skip silently** — batch mode requires Tier 3.
+
+### Batch Step 1: Read Pending Commits
+
+1. Resolve vault path (same config chain as above)
+2. Read `{vault}/.spine/pending-commits.json`
+3. If the file doesn't exist or `commits` array is empty, print:
+   `🦴 Spine: No pending commits to capture. Session clean.`
+   Then exit — do not proceed.
+
+### Batch Step 2: Group by Feature
+
+1. For each pending commit, examine the `files` array
+2. Match file paths against existing feature folders in `{vault}/{repo}/`
+3. Group commits that touch the same feature together
+4. If a commit's files don't match any existing feature:
+   - Ask the user: "Commit `{hash}` ({message}) touches `{files}`. Which feature does this belong to? (or type a new feature name)"
+   - Create the feature folder and spine note if new
+
+### Batch Step 3: Draft Docs
+
+For each feature group:
+1. Read the actual git diffs for all commits in the group:
+   ```bash
+   git diff {hash}~1 {hash} -- {files}
+   ```
+2. Consolidate into a single doc (don't create one doc per commit)
+3. Classify the work: fix, feature, architecture, plan, or decision
+4. Draft the doc using the same template as Step 3 above (frontmatter, callouts, code snippets, wikilinks)
+5. Use the combined context from all commits for a richer description
+
+### Batch Step 4: Present Batch for Approval
+
+Show the user all drafted docs at once:
+
+```
+🦴 Spine: You had {N} significant commits this session:
+
+[1] {Type} - {Description} ({Feature})
+    → {N} commits consolidated
+    Preview: {first 3 lines of the doc body}
+
+[2] {Type} - {Description} ({Feature})
+    → {N} commits
+    Preview: {first 3 lines of the doc body}
+
+For each: (S)ave, (E)dit, or S(k)ip?
+```
+
+Process each doc based on user choice:
+- **Save** → proceed to Batch Step 5
+- **Edit** → show full draft, let user request changes, then save
+- **Skip** → do not save, remove from pending
+
+### Batch Step 5: Save Approved Docs
+
+For each approved doc:
+1. Write the doc to `{vault}/{repo}/{feature}/{filename}.md`
+2. Update the spine note with a `[[wikilink]]` under the appropriate section
+3. Check Claude memory — if this is a new feature with no memory signpost, create one
+4. Log to `{vault}/.spine/curator-log.md`:
+   ```markdown
+   ## {YYYY-MM-DD} — Batch Capture
+   - **Saved:** `{filename}` (approved)
+   ```
+
+### Batch Step 6: Clean Up Pending
+
+1. Remove saved and skipped commits from `{vault}/.spine/pending-commits.json`
+2. If all commits processed, delete the file
+3. If some commits remain (shouldn't happen normally), keep them for next session
+
+### Batch Step 7: Summary
+
+Print a final summary:
+```
+🦴 Spine: {N} docs saved, {N} skipped. Vault updated.
+```
