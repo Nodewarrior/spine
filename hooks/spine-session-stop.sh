@@ -12,9 +12,10 @@ if [ -z "$VAULT_PATH" ] || [ ! -d "$VAULT_PATH" ]; then
   exit 0
 fi
 
-# Check if pending commits exist — skip if nothing to capture
+# Check if there's work to capture — pending commits or scan-discovered gaps
 PENDING_FILE="$VAULT_PATH/.spine/pending-commits.json"
-if [ ! -f "$PENDING_FILE" ]; then
+SCAN_GAPS_FILE="$VAULT_PATH/.spine/scan-gaps.json"
+if [ ! -f "$PENDING_FILE" ] && [ ! -f "$SCAN_GAPS_FILE" ]; then
   exit 0
 fi
 

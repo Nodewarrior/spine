@@ -40,19 +40,19 @@ TIER3_ENABLED="${TIER3_ENABLED,,}"
 
 # Gather commit metadata in a single git call
 IFS=$'\x01' read -r COMMIT_HASH COMMIT_MSG COMMIT_TIMESTAMP \
-  < <(git log -1 --pretty="%h%x01%s%x01%aI" 2>/dev/null)
+  < <(git log -1 --pretty="%H%x01%s%x01%aI" 2>/dev/null)
 
 # Use diff-tree --numstat for reliable stats. Handle initial commits via empty tree.
 EMPTY_TREE="4b825dc642cb6eb9a060e54bf899d15363da7b23"
 PARENT=$(git rev-parse --verify HEAD~1 2>/dev/null || echo "$EMPTY_TREE")
 NUMSTAT=$(git diff-tree --numstat --no-commit-id -r "$PARENT" HEAD 2>/dev/null)
 
-# Extract all stats in a single awk pass
-eval "$(echo "$NUMSTAT" | awk '
-  $3 != "" { files = files (files ? "\n" : "") $3; ins += $1; del += $2; cnt++ }
+# Extract all stats in a single awk pass (tab-delimited to handle paths with spaces)
+eval "$(echo "$NUMSTAT" | awk -F'\t' '
+  NF >= 3 { ins += $1; del += $2; cnt++ }
   END { printf "INSERTIONS=%d\nDELETIONS=%d\nCHANGED_FILES_COUNT=%d\n", ins, del, cnt }
 ')"
-FILES_CHANGED=$(echo "$NUMSTAT" | awk '$3 != "" {print $3}')
+FILES_CHANGED=$(echo "$NUMSTAT" | awk -F'\t' 'NF >= 3 {print $3}')
 TOTAL_CHANGES=$((INSERTIONS + DELETIONS))
 
 # Skip trivial commits (less than 20 lines changed AND only 1 file)
@@ -81,14 +81,28 @@ fi
 mkdir -p "$VAULT_PATH/.spine" 2>/dev/null
 
 PENDING_FILE="$VAULT_PATH/.spine/pending-commits.json"
-LOCK_FILE="$VAULT_PATH/.spine/pending-commits.lock"
+LOCK_DIR="$VAULT_PATH/.spine/pending-commits.lockdir"
 
-# Acquire file lock to prevent concurrent write races.
-# flock is native on Linux; on macOS requires brew install util-linux. Falls back gracefully.
-LOCK_FD=9
-if command -v flock &>/dev/null; then
-  exec 9>"$LOCK_FILE"
-  flock -w 5 9 2>/dev/null || exit 0
+# Portable lock using mkdir (atomic on all POSIX systems including macOS).
+# flock requires brew install on macOS; mkdir works everywhere.
+LOCK_ACQUIRED=false
+for _attempt in 1 2 3 4 5; do
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    LOCK_ACQUIRED=true
+    trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
+    break
+  fi
+  # Stale lock detection: remove if older than 30 seconds
+  if [ -d "$LOCK_DIR" ]; then
+    LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_DIR" 2>/dev/null || stat -c %Y "$LOCK_DIR" 2>/dev/null || echo 0) ))
+    if [ "$LOCK_AGE" -gt 30 ]; then
+      rmdir "$LOCK_DIR" 2>/dev/null
+    fi
+  fi
+  sleep 1
+done
+if [ "$LOCK_ACQUIRED" = false ]; then
+  exit 0
 fi
 
 # Append commit entry to pending-commits.json using a fallback ladder.
@@ -126,7 +140,7 @@ if os.path.isfile(pending_file):
     try:
         with open(pending_file, "r") as fh:
             data = json.load(fh)
-        if not isinstance(data, dict) or "commits" not in data:
+        if not isinstance(data, dict) or not isinstance(data.get("commits"), list):
             raise ValueError("malformed pending-commits.json")
     except Exception:
         # Preserve corrupt file for recovery instead of losing tracked commits
@@ -223,8 +237,8 @@ if command -v jq &>/dev/null; then
   exit 0
 fi
 
-# Fallback: no JSON tool available — write a fresh single-entry file.
-# Escape special characters in commit message for valid JSON.
+# Fallback: no JSON tool available — log to a sidecar file instead of overwriting.
+# Without a JSON parser we cannot safely append to the existing JSON array.
 ESCAPED_MSG=$(printf '%s' "$COMMIT_MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' ' ')
 
 FILES_JSON_ARRAY="[]"
@@ -232,7 +246,13 @@ if [ -n "$FILES_CHANGED" ]; then
   FILES_JSON_ARRAY=$(printf '%s\n' "$FILES_CHANGED" | awk 'BEGIN{printf "["} NR>1{printf ","} {gsub(/"/,"\\\""); printf "\"%s\"",$0} END{printf "]"}')
 fi
 
-cat > "$PENDING_FILE" 2>/dev/null <<JSONEOF
+# If pending-commits.json already exists, write to a sidecar to avoid overwriting
+FALLBACK_TARGET="$PENDING_FILE"
+if [ -f "$PENDING_FILE" ]; then
+  FALLBACK_TARGET="$VAULT_PATH/.spine/pending-commits.fallback.$(date +%s).json"
+fi
+
+cat > "$FALLBACK_TARGET" 2>/dev/null <<JSONEOF
 {
   "commits": [
     {

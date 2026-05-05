@@ -168,7 +168,7 @@ Before proceeding, check if Tier 3 is enabled:
 ### Batch Step 1: Read Pending Data
 
 1. Resolve vault path (same config chain as above)
-2. Check for `{vault}/.spine/scan-gaps.json` (written by `/spine-scan`'s output contract). If present, use it as the primary source for feature groups and file lists — skip re-scanning git history for those gaps. Delete the file after reading.
+2. Check for `{vault}/.spine/scan-gaps.json` (written by `/spine-scan`'s output contract). If present, use it as the primary source for feature groups and file lists — skip re-scanning git history for those gaps. Do NOT delete this file yet — defer cleanup to Batch Step 6.
 3. Read `{vault}/.spine/pending-commits.json`
 4. If neither file exists and `commits` array is empty, print:
    `🦴 Spine: No pending commits to capture. Session clean.`
@@ -235,6 +235,7 @@ For each approved doc:
 1. Remove saved and skipped commits from `{vault}/.spine/pending-commits.json`
 2. If all commits processed, delete the file
 3. If some commits remain (shouldn't happen normally), keep them for next session
+4. Delete `{vault}/.spine/scan-gaps.json` now that all save/skip decisions are finalized
 
 ### Batch Step 7: Summary
 

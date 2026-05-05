@@ -23,7 +23,7 @@ Resolve the vault path using this config chain:
 2. `~/.spine/config.json` → read the `vaultPath` field
 3. Default: `~/Documents/SpineVault/`
 
-If no vault is found, or the vault directory doesn't exist, **skip silently**. Not every repo uses Spine.
+If no vault is found, or the vault directory doesn't exist, **skip silently** — no banner, no output contract, nothing. Not every repo uses Spine. The output contract is only emitted when the scan actually runs.
 
 ## Detect Current Repo
 
@@ -38,6 +38,13 @@ Fall back to the current directory name if no git remote. If `{vault}/{repo}/` d
 Scan the vault for mechanical issues and fix them silently. Log every action to `{vault}/.spine/curator-log.md`.
 
 Ensure `{vault}/.spine/` directory exists before writing.
+
+### Conflict Guard
+
+Before writing any auto-fix to a file, compare the file's modification time against the time it was read at the start of the scan. If the file changed between read and write (another process, Obsidian, or sync edited it), **skip the fix for that file** and log:
+`**Skipped:** \`{file}\` — modified by another process during scan`
+
+This prevents overwriting concurrent edits from Obsidian, Obsidian Sync, or parallel sessions.
 
 ### 1a. Broken Wikilinks
 
