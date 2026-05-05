@@ -24,7 +24,7 @@ if (v && typeof v === 'string' && v.trim()) console.log(v);
 " 2>/dev/null)
   fi
   if [ -z "$PARSED" ] && command -v jq &>/dev/null; then
-    PARSED=$(jq -r '.vaultPath // empty' "$HOME/.spine/config.json" 2>/dev/null)
+    PARSED=$(jq -r 'if (.vaultPath | type) == "string" and (.vaultPath | length) > 0 then .vaultPath else empty end' "$HOME/.spine/config.json" 2>/dev/null)
   fi
   # Use parsed value if valid, otherwise fall back to default
   if [ -n "$PARSED" ]; then

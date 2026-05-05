@@ -45,14 +45,20 @@ IFS=$'\x01' read -r COMMIT_HASH COMMIT_MSG COMMIT_TIMESTAMP \
 # Use diff-tree --numstat for reliable stats. Handle initial commits via empty tree.
 EMPTY_TREE="4b825dc642cb6eb9a060e54bf899d15363da7b23"
 PARENT=$(git rev-parse --verify HEAD~1 2>/dev/null || echo "$EMPTY_TREE")
-NUMSTAT=$(git diff-tree --numstat --no-commit-id -r "$PARENT" HEAD 2>/dev/null)
+# Use -z for NUL-delimited output to handle all special chars in paths (tabs, spaces, etc.)
+NUMSTAT_RAW=$(git diff-tree --numstat -z --no-commit-id -r "$PARENT" HEAD 2>/dev/null)
 
-# Extract all stats in a single awk pass (tab-delimited to handle paths with spaces)
-eval "$(echo "$NUMSTAT" | awk -F'\t' '
-  NF >= 3 { ins += $1; del += $2; cnt++ }
-  END { printf "INSERTIONS=%d\nDELETIONS=%d\nCHANGED_FILES_COUNT=%d\n", ins, del, cnt }
-')"
-FILES_CHANGED=$(echo "$NUMSTAT" | awk -F'\t' 'NF >= 3 {print $3}')
+# Parse NUL-delimited numstat: format is "ins\tdel\tNULpath\0" per entry
+INSERTIONS=0; DELETIONS=0; CHANGED_FILES_COUNT=0; FILES_CHANGED=""
+while IFS=$'\t' read -r -d '' ins del path; do
+  if [ -n "$path" ]; then
+    INSERTIONS=$((INSERTIONS + ins))
+    DELETIONS=$((DELETIONS + del))
+    CHANGED_FILES_COUNT=$((CHANGED_FILES_COUNT + 1))
+    FILES_CHANGED="${FILES_CHANGED:+$FILES_CHANGED
+}$path"
+  fi
+done < <(printf '%s' "$NUMSTAT_RAW")
 TOTAL_CHANGES=$((INSERTIONS + DELETIONS))
 
 # Skip trivial commits (less than 20 lines changed AND only 1 file)
@@ -84,19 +90,31 @@ PENDING_FILE="$VAULT_PATH/.spine/pending-commits.json"
 LOCK_DIR="$VAULT_PATH/.spine/pending-commits.lockdir"
 
 # Portable lock using mkdir (atomic on all POSIX systems including macOS).
-# flock requires brew install on macOS; mkdir works everywhere.
 LOCK_ACQUIRED=false
+MY_PID=$$
 for _attempt in 1 2 3 4 5; do
   if mkdir "$LOCK_DIR" 2>/dev/null; then
+    echo "$MY_PID" > "$LOCK_DIR/pid" 2>/dev/null
     LOCK_ACQUIRED=true
-    trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
+    trap '[ -f "$LOCK_DIR/pid" ] && [ "$(cat "$LOCK_DIR/pid" 2>/dev/null)" = "'"$MY_PID"'" ] && rm -rf "$LOCK_DIR" 2>/dev/null' EXIT
     break
   fi
-  # Stale lock detection: remove if older than 30 seconds
+  # Stale lock detection: only remove if the owning process is dead
   if [ -d "$LOCK_DIR" ]; then
-    LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_DIR" 2>/dev/null || stat -c %Y "$LOCK_DIR" 2>/dev/null || echo 0) ))
-    if [ "$LOCK_AGE" -gt 30 ]; then
-      rmdir "$LOCK_DIR" 2>/dev/null
+    OWNER_PID=$(cat "$LOCK_DIR/pid" 2>/dev/null)
+    if [ -n "$OWNER_PID" ] && ! kill -0 "$OWNER_PID" 2>/dev/null; then
+      rm -rf "$LOCK_DIR" 2>/dev/null
+    elif [ -z "$OWNER_PID" ]; then
+      # No PID file — use mtime fallback (cross-platform stat)
+      if [[ "$OSTYPE" == darwin* ]]; then
+        LOCK_MTIME=$(stat -f %m "$LOCK_DIR" 2>/dev/null || echo 0)
+      else
+        LOCK_MTIME=$(stat -c %Y "$LOCK_DIR" 2>/dev/null || echo 0)
+      fi
+      LOCK_AGE=$(( $(date +%s) - LOCK_MTIME ))
+      if [ "$LOCK_AGE" -gt 30 ]; then
+        rm -rf "$LOCK_DIR" 2>/dev/null
+      fi
     fi
   fi
   sleep 1
@@ -219,16 +237,18 @@ if command -v jq &>/dev/null; then
     2>/dev/null)
 
   if [ -f "$PENDING_FILE" ]; then
-    UPDATED=$(jq --argjson entry "$NEW_ENTRY" '.commits += [$entry]' "$PENDING_FILE" 2>/dev/null)
-    if [ $? -eq 0 ]; then
-      # Atomic write via temp file
-      TMP_JQ="$PENDING_FILE.tmp.$$"
-      echo "$UPDATED" > "$TMP_JQ" 2>/dev/null && mv "$TMP_JQ" "$PENDING_FILE" 2>/dev/null
-      exit 0
-    else
-      # Preserve corrupt file for recovery
-      cp "$PENDING_FILE" "$PENDING_FILE.corrupt.$(date +%Y%m%d%H%M%S)" 2>/dev/null
+    # Validate commits is an array before appending
+    COMMITS_TYPE=$(jq -r '.commits | type' "$PENDING_FILE" 2>/dev/null)
+    if [ "$COMMITS_TYPE" = "array" ]; then
+      UPDATED=$(jq --argjson entry "$NEW_ENTRY" '.commits += [$entry]' "$PENDING_FILE" 2>/dev/null)
+      if [ $? -eq 0 ]; then
+        TMP_JQ="$PENDING_FILE.tmp.$$"
+        echo "$UPDATED" > "$TMP_JQ" 2>/dev/null && mv "$TMP_JQ" "$PENDING_FILE" 2>/dev/null
+        exit 0
+      fi
     fi
+    # Malformed or parse failure — preserve corrupt file for recovery
+    cp "$PENDING_FILE" "$PENDING_FILE.corrupt.$(date +%Y%m%d%H%M%S)" 2>/dev/null
   fi
 
   # File doesn't exist or was corrupt — write fresh via atomic rename

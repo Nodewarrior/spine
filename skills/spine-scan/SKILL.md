@@ -41,10 +41,13 @@ Ensure `{vault}/.spine/` directory exists before writing.
 
 ### Conflict Guard
 
-Before writing any auto-fix to a file, compare the file's modification time against the time it was read at the start of the scan. If the file changed between read and write (another process, Obsidian, or sync edited it), **skip the fix for that file** and log:
-`**Skipped:** \`{file}\` — modified by another process during scan`
+Before reading each file for auto-fix analysis, record its modification time **and file size** (size catches same-second edits on filesystems with only second-resolution timestamps). Before writing the fix back:
+1. Re-check mtime and size against the recorded values
+2. If either changed, **skip the fix for that file** and log:
+   `**Skipped:** \`{file}\` — modified by another process during scan`
+3. Proceed with the next file
 
-This prevents overwriting concurrent edits from Obsidian, Obsidian Sync, or parallel sessions.
+This prevents overwriting concurrent edits from Obsidian, Obsidian Sync, or parallel sessions. The dual check (mtime + size) handles HFS+/ext4 second-resolution timestamps where a sub-second edit would otherwise be invisible.
 
 ### 1a. Broken Wikilinks
 

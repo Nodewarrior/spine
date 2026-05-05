@@ -150,7 +150,7 @@ spine_capture_result:
 - `skipped` — user skipped all docs (batch mode)
 - `error` — capture failed (vault missing, write error) — include `recovery_hint`
 
-**Cross-skill input:** In batch mode, check for `{vault}/.spine/scan-gaps.json` first. If present, use it to pre-populate feature groups and file lists instead of re-scanning git history. Delete the file after consuming it.
+**Cross-skill input:** In batch mode, check for `{vault}/.spine/scan-gaps.json` first. If present, use it to pre-populate feature groups and file lists instead of re-scanning git history. Do not delete the file here — cleanup happens in Batch Step 6 after all save/skip decisions are finalized.
 
 ---
 
@@ -170,7 +170,8 @@ Before proceeding, check if Tier 3 is enabled:
 1. Resolve vault path (same config chain as above)
 2. Check for `{vault}/.spine/scan-gaps.json` (written by `/spine-scan`'s output contract). If present, use it as the primary source for feature groups and file lists — skip re-scanning git history for those gaps. Do NOT delete this file yet — defer cleanup to Batch Step 6.
 3. Read `{vault}/.spine/pending-commits.json`
-4. If neither file exists and `commits` array is empty, print:
+4. Check for `{vault}/.spine/pending-commits.fallback.*.json` sidecar files (written by the bash fallback when no JSON parser was available). If any exist, merge their `commits` arrays into the main pending data, then delete the sidecar files.
+5. If no scan gaps, no pending commits, and no sidecars found, print:
    `🦴 Spine: No pending commits to capture. Session clean.`
    Then exit — do not proceed.
 
