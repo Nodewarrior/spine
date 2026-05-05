@@ -30,7 +30,7 @@ if [ -f "$HOME/.spine/config.json" ]; then
     TIER3_ENABLED=$(jq -r '.tier3 // false' "$HOME/.spine/config.json" 2>/dev/null || echo "false")
   fi
 fi
-TIER3_ENABLED="${TIER3_ENABLED,,}"
+TIER3_ENABLED=$(printf '%s' "$TIER3_ENABLED" | tr '[:upper:]' '[:lower:]')
 
 if [[ "$TIER3_ENABLED" != "true" ]]; then
   exit 0

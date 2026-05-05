@@ -35,8 +35,8 @@ if [ -f "$HOME/.spine/config.json" ]; then
     TIER3_ENABLED=$(jq -r '.tier3 // false' "$HOME/.spine/config.json" 2>/dev/null || echo "false")
   fi
 fi
-# Normalize to lowercase
-TIER3_ENABLED="${TIER3_ENABLED,,}"
+# Normalize to lowercase (Bash 3.2 compatible)
+TIER3_ENABLED=$(printf '%s' "$TIER3_ENABLED" | tr '[:upper:]' '[:lower:]')
 
 # Gather commit metadata in a single git call
 IFS=$'\x01' read -r COMMIT_HASH COMMIT_MSG COMMIT_TIMESTAMP \
@@ -49,11 +49,16 @@ PARENT=$(git rev-parse --verify HEAD~1 2>/dev/null || echo "$EMPTY_TREE")
 NUMSTAT_RAW=$(git diff-tree --numstat -z --no-commit-id -r "$PARENT" HEAD 2>/dev/null)
 
 # Parse NUL-delimited numstat: format is "ins\tdel\tNULpath\0" per entry
-INSERTIONS=0; DELETIONS=0; CHANGED_FILES_COUNT=0; FILES_CHANGED=""
+# Binary files report "-\t-\tpath" — count them as significant (HAS_BINARY)
+INSERTIONS=0; DELETIONS=0; CHANGED_FILES_COUNT=0; HAS_BINARY=0; FILES_CHANGED=""
 while IFS=$'\t' read -r -d '' ins del path; do
   if [ -n "$path" ]; then
-    INSERTIONS=$((INSERTIONS + ins))
-    DELETIONS=$((DELETIONS + del))
+    if [ "$ins" = "-" ] || [ "$del" = "-" ]; then
+      HAS_BINARY=1
+    else
+      INSERTIONS=$((INSERTIONS + ins))
+      DELETIONS=$((DELETIONS + del))
+    fi
     CHANGED_FILES_COUNT=$((CHANGED_FILES_COUNT + 1))
     FILES_CHANGED="${FILES_CHANGED:+$FILES_CHANGED
 }$path"
@@ -61,17 +66,16 @@ while IFS=$'\t' read -r -d '' ins del path; do
 done < <(printf '%s' "$NUMSTAT_RAW")
 TOTAL_CHANGES=$((INSERTIONS + DELETIONS))
 
-# Skip trivial commits (less than 20 lines changed AND only 1 file)
-if [ "$TOTAL_CHANGES" -lt 20 ] && [ "$CHANGED_FILES_COUNT" -le 1 ]; then
+# Skip trivial commits (less than 20 lines changed AND only 1 file AND no binary changes)
+if [ "$HAS_BINARY" -eq 0 ] && [ "$TOTAL_CHANGES" -lt 20 ] && [ "$CHANGED_FILES_COUNT" -le 1 ]; then
   exit 0
 fi
 
-# Skip merge and trivial-category commits using bash built-in regex (no subprocesses)
-MSG_LOWER="${COMMIT_MSG,,}"
-if [[ "$MSG_LOWER" =~ ^merge ]]; then
+# Skip merge and trivial-category commits (Bash 3.2 compatible — no ${var,,})
+if printf '%s\n' "$COMMIT_MSG" | grep -qiE '^merge' 2>/dev/null; then
   exit 0
 fi
-if [[ "$MSG_LOWER" =~ ^(style|lint|chore|docs)(\(.*\))?[:/!\ ] ]]; then
+if printf '%s\n' "$COMMIT_MSG" | grep -qiE '^(style|lint|chore|docs)(\(.*\))?[:/! -]' 2>/dev/null; then
   exit 0
 fi
 
@@ -259,11 +263,12 @@ fi
 
 # Fallback: no JSON tool available — log to a sidecar file instead of overwriting.
 # Without a JSON parser we cannot safely append to the existing JSON array.
-ESCAPED_MSG=$(printf '%s' "$COMMIT_MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' ' ')
+# Escape backslash, double quote, and control chars (newline, tab, carriage return)
+ESCAPED_MSG=$(printf '%s' "$COMMIT_MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n\r' '  ')
 
 FILES_JSON_ARRAY="[]"
 if [ -n "$FILES_CHANGED" ]; then
-  FILES_JSON_ARRAY=$(printf '%s\n' "$FILES_CHANGED" | awk 'BEGIN{printf "["} NR>1{printf ","} {gsub(/"/,"\\\""); printf "\"%s\"",$0} END{printf "]"}')
+  FILES_JSON_ARRAY=$(printf '%s\n' "$FILES_CHANGED" | awk 'BEGIN{printf "["} NR>1{printf ","} {gsub(/\\/,"\\\\"); gsub(/"/,"\\\""); gsub(/\t/,"\\t"); printf "\"%s\"",$0} END{printf "]"}')
 fi
 
 # If pending-commits.json already exists, write to a sidecar to avoid overwriting
