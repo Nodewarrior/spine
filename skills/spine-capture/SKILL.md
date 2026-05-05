@@ -124,6 +124,34 @@ After saving, quickly scan the feature's existing docs:
 
 Report findings briefly — don't act without user approval.
 
+## Output Contract
+
+After completing a capture (single or batch), emit a structured observation block.
+
+```yaml
+spine_capture_result:
+  status: success | partial | skipped | error
+  summary: "Captured 2 docs (1 fix, 1 feature) into auth feature"
+  saved:
+    - { file: "2026-05-03 Fix - Login Race.md", feature: "auth", type: "fix", spine_updated: true }
+    - { file: "Feature - OAuth Flow.md", feature: "auth", type: "feature", spine_updated: true }
+  skipped: []
+  patterns_detected:
+    - { type: "recurring-fixes", feature: "auth", count: 4, suggestion: "consider architecture doc" }
+  next_actions:
+    - { action: "open Obsidian", path: "{vault}/spine/auth/" }
+    - { action: "review pattern", detail: "4 fixes in auth — architecture doc recommended" }
+  recovery_hint: null
+```
+
+**Status values:**
+- `success` — all docs saved and spine notes updated
+- `partial` — some docs saved, some skipped or errored
+- `skipped` — user skipped all docs (batch mode)
+- `error` — capture failed (vault missing, write error) — include `recovery_hint`
+
+**Cross-skill input:** In batch mode, check for `{vault}/.spine/scan-gaps.json` first. If present, use it to pre-populate feature groups and file lists instead of re-scanning git history. Delete the file after consuming it.
+
 ---
 
 ## Batch Mode (`--batch`)
@@ -137,11 +165,12 @@ Before proceeding, check if Tier 3 is enabled:
 2. Check the `tier3` field
 3. If `tier3` is `false` or missing, **skip silently** — batch mode requires Tier 3.
 
-### Batch Step 1: Read Pending Commits
+### Batch Step 1: Read Pending Data
 
 1. Resolve vault path (same config chain as above)
-2. Read `{vault}/.spine/pending-commits.json`
-3. If the file doesn't exist or `commits` array is empty, print:
+2. Check for `{vault}/.spine/scan-gaps.json` (written by `/spine-scan`'s output contract). If present, use it as the primary source for feature groups and file lists — skip re-scanning git history for those gaps. Delete the file after reading.
+3. Read `{vault}/.spine/pending-commits.json`
+4. If neither file exists and `commits` array is empty, print:
    `🦴 Spine: No pending commits to capture. Session clean.`
    Then exit — do not proceed.
 

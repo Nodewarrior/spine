@@ -113,6 +113,35 @@ Then list each issue with a suggested action. Do NOT auto-fix — present findin
 
 If user approves fixes, use `/spine-capture` for new docs, and direct edits for spine note / tag updates.
 
+## Output Contract
+
+After presenting the human-readable report, emit a structured observation block.
+
+```yaml
+spine_health_result:
+  status: healthy | warning | critical | error
+  summary: "6 checks complete — 2 warnings (coverage, staleness)"
+  checks:
+    - { name: "coverage", status: "warn", count: 2, issues: ["auth: 3 commits undocumented", "payments: new endpoint"] }
+    - { name: "staleness", status: "warn", count: 1, issues: ["Fix - Session Bug: 5 commits since"] }
+    - { name: "duplicates", status: "pass", count: 0, issues: [] }
+    - { name: "spine_integrity", status: "pass", count: 0, issues: [] }
+    - { name: "tags", status: "pass", count: 0, issues: [] }
+    - { name: "memory_sync", status: "pass", count: 0, issues: [] }
+  next_actions:
+    - { action: "/spine-capture", reason: "2 coverage gaps to document" }
+    - { action: "review stale", file: "2026-03-18 Fix - Session Bug.md" }
+  recovery_hint: null
+```
+
+**Status values:**
+- `healthy` — all checks passed
+- `warning` — some checks have issues, vault is functional
+- `critical` — spine integrity broken (ghost links, missing spine notes)
+- `error` — scan failed (vault missing, permissions) — include `recovery_hint`
+
+**Cross-skill handoff:** Health results inform `/spine-scan`'s staleness checks. If health was run recently (`last-health-timestamp` < 14 days), scan can skip its own staleness pass and reference health's findings.
+
 ## Update Health Timestamp
 
 After presenting the report, write the current ISO timestamp to `{vault}/.spine/last-health-timestamp`. This lets `/spine-scan` know when the last full health check was run and remind the user when it's been too long (14+ days).

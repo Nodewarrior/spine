@@ -156,7 +156,38 @@ Examples with the reminder:
 
 If the last health check was within 14 days, do not mention it.
 
-## Phase 4: Update Timestamp
+## Phase 4: Structured Output
+
+After the human-readable banner, emit a structured observation block. This is the contract that downstream skills (especially `/spine-capture --batch`) rely on.
+
+```yaml
+spine_scan_result:
+  status: success | warning | error
+  summary: "5 commits since last session — 2 wikilinks fixed, 1 coverage gap"
+  auto_fixes:
+    - { type: "wikilink", file: "Auth/Login.md", detail: "[[Logn]] → [[Login]]" }
+    - { type: "tag", file: "2026-04-10 Fix - Cache Bug.md", detail: "added type/fix" }
+    - { type: "orphan", file: "Architecture - API Layer.md", linked_to: "API.md" }
+  stale_docs:
+    - { file: "2026-03-18 Fix - Session Bug.md", reason: "session.hook.ts has 5 commits since" }
+  obsolete_docs:
+    - { file: "2026-03-12 Feature - TradeIn Flow.md", reason: "all referenced files removed" }
+  coverage_gaps:
+    - { feature: "auth", commits: 3, files: ["src/auth/login.ts", "src/auth/session.ts"] }
+  next_actions:
+    - { action: "/spine-capture", reason: "1 undocumented feature group" }
+    - { action: "review obsolete", file: "2026-03-12 Feature - TradeIn Flow.md" }
+  recovery_hint: null
+```
+
+**Status values:**
+- `success` — scan completed, no issues found
+- `warning` — scan completed, issues found (gaps, stale, obsolete)
+- `error` — scan failed (vault missing, git error, etc.) — include `recovery_hint`
+
+**Cross-skill handoff:** Write coverage gaps to `{vault}/.spine/scan-gaps.json` so `/spine-capture --batch` can pre-populate drafts without re-scanning. Delete this file after capture consumes it.
+
+## Phase 5: Update Timestamp
 
 Write the current ISO timestamp to `{vault}/.spine/last-scan-timestamp`:
 ```

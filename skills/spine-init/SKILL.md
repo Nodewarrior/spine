@@ -168,3 +168,37 @@ Next steps:
 4. Use /spine-health periodically to audit vault health
 5. (Optional) Add the status line segment — see docs/status-line.md
 ```
+
+## Output Contract
+
+After initialization completes, emit a structured observation block.
+
+```yaml
+spine_init_result:
+  status: success | partial | error
+  mode: fresh | adopt
+  summary: "Fresh vault created at ~/Documents/SpineVault with 1 repo, 1 feature"
+  created:
+    - { type: "directory", path: "~/Documents/SpineVault/" }
+    - { type: "directory", path: "~/Documents/SpineVault/spine/" }
+    - { type: "config", path: "~/.spine/config.json" }
+    - { type: "graph", path: ".obsidian/graph.json" }
+    - { type: "meta", path: "Spine Architecture.md" }
+    - { type: "spine_note", path: "spine/Tier 3 Curator/Tier 3 Curator.md" }
+  adopted:
+    repos: 0
+    features: 0
+    docs: 0
+    tags_missing: 0
+  next_actions:
+    - { action: "open Obsidian", path: "~/Documents/SpineVault/" }
+    - { action: "/spine-capture", reason: "start documenting current work" }
+  recovery_hint: null
+```
+
+**Status values:**
+- `success` — vault fully initialized, all files created
+- `partial` — vault created but some steps skipped (e.g., no git repo detected, user skipped feature creation)
+- `error` — init failed (permissions, disk space) — include `recovery_hint`
+
+**Mode:** `fresh` when creating a new vault, `adopt` when integrating an existing Obsidian vault. The `adopted` fields are only populated in adopt mode; `created` is only populated in fresh mode.
