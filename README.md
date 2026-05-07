@@ -180,6 +180,7 @@ The AI's job: everything else.
 - [x] Graph colors — type tags with Obsidian color groups
 - [x] Status line — bone avatar with vault activity
 - [x] Tier 3 curator — self-maintaining vault with session-start scanning, silent commit tracking, and batch capture
+- [ ] `/spine-update` — resume and enrich existing spine docs (plans, architecture) after continued work sessions
 - [ ] `/spine-search` — full-text search across the vault
 - [ ] Cross-vault discovery — find related concepts across multiple vaults
 - [ ] Cloud sync — integration for cross-machine persistence
