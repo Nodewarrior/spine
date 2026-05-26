@@ -141,7 +141,7 @@ After conflict guard passes:
 4. **Spine note update** (conditional):
    - If the updated doc is NOT a spine note (i.e., it is a leaf doc inside a feature folder): check if new wikilinks were added that the spine note should reference. If so, update the spine note. Set `spine_updated: true` in output contract
    - If the updated doc IS a spine note: skip this step entirely — no circular self-reference. Set `spine_updated: false`
-5. **Curator log** — ensure `{vault}/.spine/curator-log.md` exists (create from `templates/curator-log.md` if missing). Prepend:
+5. **Curator log** — ensure `{vault}/.spine/curator-log.md` exists (create from `templates/curator-log.md` if missing). Prepend this entry (newest at top):
    ```markdown
    ## {YYYY-MM-DD} — Update
    - **Updated:** `{filename}` — {N} commits incorporated
@@ -187,7 +187,7 @@ If more than 10 stale docs exist, add: `(showing top 10 of {total} stale docs)`
 
 ### Step 4: User Picks
 
-If the user picks a number → load that doc and enter **Targeted Mode, Step 2** (Read Existing Doc) onward.
+If the user picks a number → load that doc and enter **Targeted Mode, Step 2** (Read Existing Doc) onward. The target is already resolved from the pick list — skip Step 1.
 
 If the user skips → emit output contract with `status: skipped`.
 
