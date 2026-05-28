@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 (2026-05-28)
+
+Resume and enrich existing docs.
+
+### New Skills
+- `/spine-update` — update an existing spine doc instead of creating a new one. Two modes:
+  - **Targeted:** `/spine-update <name>` — fuzzy-matches a spine note, doc, or feature and appends an update.
+  - **Auto-detect:** `/spine-update` (no args) — ranks stale docs (referenced files with new commits) and lets you pick which to update.
+  - Append-only: preserves the original content and adds a dated update section drawn from git diffs plus session context. Best for plans and architecture docs that evolve across sessions.
+
 ## 0.2.0 (2026-04-19)
 
 Tier 3: Self-Maintaining Vault.
