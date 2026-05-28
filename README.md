@@ -47,6 +47,7 @@ Spine doesn't just store knowledge — it grows itself:
 
 - **`/spine-capture`** — After you complete work, this skill auto-drafts an Obsidian doc from your commits. Detects the repo, matches the feature, applies the naming conventions, updates the spine note with wikilinks. You review and approve.
 - **`/spine-health`** — On-demand vault audit. Finds undocumented commits, stale docs, duplicate notes, broken wikilinks, missing tags, and memory sync issues.
+- **`/spine-update`** — Resume and enrich existing docs after continued work sessions. Detects stale docs or targets a specific note, then appends a timestamped update with git changes and session context. Your docs evolve with your code.
 - **Post-commit hook** — After significant commits (20+ lines, 2+ files), silently tracks them in `pending-commits.json` for later batch capture.
 - **Status line** — Optional bone avatar (`🦴`) showing vault activity in your Claude Code status bar.
 - **Session-start scanner** — `/spine-scan` runs automatically when you open Claude Code. Auto-fixes broken wikilinks, missing tags, and orphan docs. Detects undocumented commits and reports them in a non-blocking banner.
@@ -138,7 +139,8 @@ spine/
 │   ├── spine-init/          # Vault setup wizard
 │   ├── spine-capture/       # Auto-draft docs (+ batch mode)
 │   ├── spine-health/        # Vault audit and curation
-│   └── spine-scan/          # Session-start scanner (Tier 3)
+│   ├── spine-scan/          # Session-start scanner (Tier 3)
+│   └── spine-update/       # Resume and update existing docs
 ├── hooks/
 │   ├── hooks.json           # SessionStart + PostToolUse + Stop hooks
 │   ├── spine-commit-tracker.sh  # Silent commit tracker
@@ -180,6 +182,7 @@ The AI's job: everything else.
 - [x] Graph colors — type tags with Obsidian color groups
 - [x] Status line — bone avatar with vault activity
 - [x] Tier 3 curator — self-maintaining vault with session-start scanning, silent commit tracking, and batch capture
+- [x] `/spine-update` — resume and enrich existing spine docs (plans, architecture) after continued work sessions
 - [ ] `/spine-search` — full-text search across the vault
 - [ ] Cross-vault discovery — find related concepts across multiple vaults
 - [ ] Cloud sync — integration for cross-machine persistence
