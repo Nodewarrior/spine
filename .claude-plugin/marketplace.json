@@ -10,7 +10,7 @@
       "name": "spine",
       "source": "./",
       "description": "Persistent, structured knowledge for Claude Code agents. Obsidian vault + auto-capture + color-coded graph.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "author": {
         "name": "Nodewarrior"
       },
