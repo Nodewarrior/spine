@@ -85,7 +85,7 @@ You now have full context on this feature. Refer to these docs as you work.
 
 ```yaml
 spine_recall_result:
-  status: success | no_match | error
+  status: success | no_match | skipped | error
   summary: "Loaded 5 docs for Authentication (my-repo)"
   feature: "authentication"
   docs_loaded:
