@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 (2026-06-03)
+
+Memory Bridge — "Coexist" approach.
+
+### New Skills
+- `/spine-recall` — On-demand deep pull. Loads all vault docs for a feature area. Browse mode lists available features; targeted mode fuzzy-matches and loads everything.
+
+### New Features
+- **Auto-load at session start** — SessionStart hook now injects a compact vault index and retrieval policy into every session. Claude knows what spine docs exist from the first prompt. Controlled by `autoLoad` flag in `~/.spine/config.json` (default: `true`). Independent of Tier 3.
+- **Retrieval policy** — shipped in `templates/retrieval-policy.md`. Teaches Claude three-hop vault navigation. Per-vault override supported at `{vault}/.spine/retrieval-policy.md`.
+
+### Fixed
+- SessionStart hook Bash 3.2 compatibility (macOS default shell)
+
 ## 0.3.0 (2026-05-28)
 
 Resume and enrich existing docs.
