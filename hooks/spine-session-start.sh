@@ -67,8 +67,9 @@ if [ "$AUTOLOAD_ENABLED" = "true" ]; then
   INDEX="${INDEX}Features documented in this repo's vault:\n\n"
 
   FOUND_NOTES=0
-  while IFS= read -r -d '' note_file; do
-    TITLE=$(sed -n '/^---$/,/^---$/{ /^title:/{ s/^title:[[:space:]]*//; s/^["'"'"']//; s/["'"'"']$//; p; q; } }' "$note_file" 2>/dev/null)
+  while IFS= read -r note_file; do
+    [ -z "$note_file" ] && continue
+    TITLE=$(awk '/^---$/{n++; next} n==1 && /^title:/{sub(/^title:[[:space:]]*/, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit}' "$note_file" 2>/dev/null)
     if [ -z "$TITLE" ]; then
       TITLE=$(basename "$note_file" .md)
     fi
@@ -76,7 +77,7 @@ if [ "$AUTOLOAD_ENABLED" = "true" ]; then
     CHILD_COUNT=$(find "$(dirname "$note_file")" -maxdepth 1 -name "*.md" ! -name "$(basename "$note_file")" 2>/dev/null | wc -l | tr -d ' ')
     INDEX="${INDEX}- **${TITLE}** (${FEATURE_DIR}/) — ${CHILD_COUNT} docs\n"
     FOUND_NOTES=$((FOUND_NOTES + 1))
-  done < <(grep -rlZ "type/spine" "$REPO_DIR" 2>/dev/null)
+  done < <(grep -rl "type/spine" "$REPO_DIR" 2>/dev/null)
 
   if [ "$FOUND_NOTES" -eq 0 ]; then
     INDEX="${INDEX}_(No spine notes found for this repo. Use /spine-capture to create the first one.)_\n"
