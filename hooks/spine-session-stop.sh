@@ -4,12 +4,26 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Capture the hook payload (stdin JSON: session_id, transcript_path, cwd, ...)
+# before any early exit — the episode extractor needs it regardless of
+# whether there is capture work pending.
+HOOK_INPUT=""
+if [ ! -t 0 ]; then
+  HOOK_INPUT=$(cat 2>/dev/null || true)
+fi
+
 # Resolve vault path
 VAULT_PATH=$(bash "$SCRIPT_DIR/spine-resolve-vault.sh" 2>/dev/null)
 
 # Skip silently if no vault configured
 if [ -z "$VAULT_PATH" ] || [ ! -d "$VAULT_PATH" ]; then
   exit 0
+fi
+
+# Episodic memory: extract a session episode from the transcript.
+# Runs before the pending-work gate; never blocks or fails the hook.
+if [ -n "$HOOK_INPUT" ] && [ -f "$SCRIPT_DIR/spine-episode-extract.sh" ]; then
+  bash "$SCRIPT_DIR/spine-episode-extract.sh" "$HOOK_INPUT" >/dev/null 2>&1 || true
 fi
 
 # Check if there's work to capture — pending commits or scan-discovered gaps

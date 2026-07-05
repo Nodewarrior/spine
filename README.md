@@ -49,6 +49,8 @@ Spine doesn't just store knowledge — it grows itself:
 - **`/spine-health`** — On-demand vault audit. Finds undocumented commits, stale docs, duplicate notes, broken wikilinks, missing tags, and memory sync issues.
 - **`/spine-update`** — Resume and enrich existing docs after continued work sessions. Detects stale docs or targets a specific note, then appends a timestamped update with git changes and session context. Your docs evolve with your code.
 - **`/spine-recall`** — On-demand deep pull. Loads all vault docs for a feature area into your context when you need full knowledge beyond the auto-loaded index.
+- **`/spine-sessions`** — Episodic memory search. Answers "what did we do / decide / try in a past session?" — greps the episode log first, then drills into raw session transcripts with type-filtered ripgrep. Deterministic, no LLM calls, returns resume commands.
+- **Episode log** — At session end, the Stop hook extracts a compact episode record (title, asks, branch, files touched) from the session transcript into `{vault}/.spine/episodes/{repo}.md`. Survives transcript rotation. The last 3 episodes are injected at session start for continuity. Controlled by `episodes` flag (default: follows `tier3`).
 - **Auto-load** — At session start, Spine automatically injects a vault index and retrieval policy so Claude knows what knowledge is available. No manual invocation needed. Controlled by `autoLoad` flag (default: on).
 - **Post-commit hook** — After significant commits (20+ lines, 2+ files), silently tracks them in `pending-commits.json` for later batch capture.
 - **Status line** — Optional bone avatar (`🦴`) showing vault activity in your Claude Code status bar.
@@ -132,6 +134,14 @@ Spine resolves the vault path from:
 2. `~/.spine/config.json` → `{ "vaultPath": "/absolute/path" }`
 3. Default: `~/Documents/SpineVault/`
 
+`~/.spine/config.json` flags:
+
+| Flag | Default | What it controls |
+|------|---------|------------------|
+| `autoLoad` | `true` | Inject vault index + retrieval policy at session start |
+| `tier3` | `false` | Autonomous loop: silent commit tracking, session-start scan, batch capture |
+| `episodes` | follows `tier3` | Episode extraction at session end + recent-sessions block at session start |
+
 ## Repo Structure
 
 ```
@@ -143,10 +153,12 @@ spine/
 │   ├── spine-health/        # Vault audit and curation
 │   ├── spine-scan/          # Session-start scanner (Tier 3)
 │   ├── spine-update/       # Resume and update existing docs
-│   └── spine-recall/        # On-demand deep pull from vault
+│   ├── spine-recall/        # On-demand deep pull from vault
+│   └── spine-sessions/      # Episodic memory search over past sessions
 ├── hooks/
 │   ├── hooks.json           # SessionStart + PostToolUse + Stop hooks
 │   ├── spine-commit-tracker.sh  # Silent commit tracker
+│   ├── spine-episode-extract.sh # Session-end episode extractor
 │   └── spine-resolve-vault.sh   # Vault path resolver
 ├── templates/               # Vault templates
 ├── scripts/
@@ -187,6 +199,9 @@ The AI's job: everything else.
 - [x] Tier 3 curator — self-maintaining vault with session-start scanning, silent commit tracking, and batch capture
 - [x] `/spine-update` — resume and enrich existing spine docs (plans, architecture) after continued work sessions
 - [x] `/spine-recall` — on-demand deep pull from vault + auto-load at session start
+- [x] `/spine-sessions` — episodic memory: session-end episode extraction + deterministic search over past sessions
+- [ ] `/spine-dream` — synthesis curator: derive playbooks/gotchas across docs and episodes (design: `docs/research/2026-07-05-spine-intelligence-upgrades.md`)
+- [ ] `/spine-learn` — mine sessions for repeated patterns and failures into learned rules
 - [ ] `/spine-search` — full-text search across the vault
 - [ ] Cross-vault discovery — find related concepts across multiple vaults
 - [ ] Cloud sync — integration for cross-machine persistence

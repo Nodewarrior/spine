@@ -63,6 +63,9 @@ tags:
   - type/{type}
 severity: {sev1|sev2|sev3} (fixes only)
 status: {resolved|in-progress|pending}
+answers:
+  - "{question this doc answers, phrased as the user would ask it}"
+  - "{2-5 total — e.g. 'why does the login modal flash on Safari?'}"
 ---
 
 # {Type} - {Description}
@@ -96,6 +99,7 @@ status: {resolved|in-progress|pending}
 - Use Obsidian callouts (`> [!bug]`, `> [!note]`, `> [!warning]`, `> [!tip]`)
 - Include code snippets for root cause and fix — these are the most valuable part
 - Keep wikilinks relative (just the note name, not full path) for Obsidian compatibility
+- **`answers:` frontmatter** — write 2-5 questions this doc answers, phrased the way a future session would ask them ("why does X happen?", "how do we deploy Y?"). Plain-text search then finds the doc by *question*, not just by keyword — anticipated queries make grep behave like semantic search.
 
 ## Step 4: Present Draft for Review
 

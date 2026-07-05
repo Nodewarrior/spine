@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.0 (2026-07-05)
+
+Episodic memory — Spine remembers what happened, not just what was written.
+
+### New Skills
+- `/spine-sessions` — Search past Claude Code sessions. Three modes inferred from arguments: browse (recent sessions), discover (two-tier search: episode log first, then type-filtered ripgrep over raw transcripts), read (single session). Deterministic — no LLM calls in the search loop. Returns verbatim excerpts and `claude --resume` commands.
+
+### New Features
+- **Episode extraction** — New `hooks/spine-episode-extract.sh`, called by the Stop hook with the session transcript path. Extracts a compact episode record (AI title, human asks, last prompt, branch, time span, files touched) into `{vault}/.spine/episodes/{repo}.md`. Pure python3 extraction, ~0.4s even on 90MB transcripts, idempotent per session, never blocks the hook. Episodes survive Claude Code transcript rotation.
+- **Recent-sessions block** — SessionStart hook now injects the last 3 episode titles for session continuity (Part 1.5 of the auto-load context).
+- **`episodes` config flag** — gates episode extraction; defaults to the value of `tier3` (episodic capture is an autonomous write).
+- **Anticipated queries (`answers:` frontmatter)** — `/spine-capture` and `/spine-update` now write 2-5 questions each doc answers, phrased as a future session would ask them. Plain-text search finds docs by question, not just keyword.
+
+### Changed
+- Stop hook now captures its stdin payload (session_id, transcript_path) before any early exit and invokes the episode extractor regardless of pending capture work.
+
 ## 0.4.0 (2026-06-03)
 
 Memory Bridge — "Coexist" approach.

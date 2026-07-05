@@ -137,7 +137,7 @@ After conflict guard passes:
 
 1. **Append** the update section to the end of the existing doc file (insert the update before any existing `## See Also` section — the update goes between the last content section and See Also)
 2. **Merge wikilinks** — insert any new `[[wikilinks]]` into the existing `## See Also` section. If no `## See Also` section exists, create one at the very end of the doc after the appended update
-3. **Update frontmatter** — add or update `last_updated: {YYYY-MM-DD}` in the doc's YAML frontmatter. Preserve the original `date` field unchanged
+3. **Update frontmatter** — add or update `last_updated: {YYYY-MM-DD}` in the doc's YAML frontmatter. Preserve the original `date` field unchanged. If the update changed what the doc covers, refresh the `answers:` list (2-5 questions this doc answers, phrased as a future session would ask them); add the list if the doc predates it
 4. **Spine note update** (conditional):
    - If the updated doc is NOT a spine note (i.e., it is a leaf doc inside a feature folder): check if new wikilinks were added that the spine note should reference. If so, update the spine note. Set `spine_updated: true` in output contract
    - If the updated doc IS a spine note: skip this step entirely — no circular self-reference. Set `spine_updated: false`

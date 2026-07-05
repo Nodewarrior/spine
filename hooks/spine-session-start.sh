@@ -57,6 +57,17 @@ fi
 AUTOLOAD_ENABLED=$(printf '%s' "$AUTOLOAD_ENABLED" | tr '[:upper:]' '[:lower:]')
 TIER3_ENABLED=$(printf '%s' "$TIER3_ENABLED" | tr '[:upper:]' '[:lower:]')
 
+# episodes flag (default: follows tier3)
+EPISODES_ENABLED="$TIER3_ENABLED"
+if [ -f "$HOME/.spine/config.json" ] && command -v python3 &>/dev/null; then
+  EPISODES_ENABLED=$(python3 -c "
+import json
+c = json.load(open('$HOME/.spine/config.json'))
+print(str(c.get('episodes', c.get('tier3', False))).lower())
+" 2>/dev/null || echo "$TIER3_ENABLED")
+fi
+EPISODES_ENABLED=$(printf '%s' "$EPISODES_ENABLED" | tr '[:upper:]' '[:lower:]')
+
 # --- Build context parts ---
 CONTEXT_PARTS=""
 
@@ -94,6 +105,16 @@ if [ "$AUTOLOAD_ENABLED" = "true" ]; then
   CONTEXT_PARTS="${INDEX}"
   if [ -n "$POLICY" ]; then
     CONTEXT_PARTS="${CONTEXT_PARTS}\n---\n\n${POLICY}"
+  fi
+
+  # Part 1.5: Recent episodes (episodic memory) — last 3 session records
+  EPISODES_FILE="$VAULT_PATH/.spine/episodes/$REPO_NAME.md"
+  if [ "$EPISODES_ENABLED" = "true" ] && [ -f "$EPISODES_FILE" ]; then
+    RECENT_EPISODES=$(grep -E '^## ' "$EPISODES_FILE" 2>/dev/null | tail -3 | sed 's/^## /- /')
+    if [ -n "$RECENT_EPISODES" ]; then
+      EPISODES_BLOCK="## Recent Sessions — $REPO_NAME\n\n${RECENT_EPISODES}\n\n_Full episode log: \`.spine/episodes/$REPO_NAME.md\` in the vault. Search past sessions with /spine-sessions._"
+      CONTEXT_PARTS="${CONTEXT_PARTS}\n\n---\n\n${EPISODES_BLOCK}"
+    fi
   fi
 fi
 
