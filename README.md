@@ -51,6 +51,7 @@ Spine doesn't just store knowledge — it grows itself:
 - **`/spine-recall`** — On-demand deep pull. Loads all vault docs for a feature area into your context when you need full knowledge beyond the auto-loaded index.
 - **`/spine-sessions`** — Episodic memory search. Answers "what did we do / decide / try in a past session?" — greps the episode log first, then drills into raw session transcripts with type-filtered ripgrep. Deterministic, no LLM calls, returns resume commands.
 - **Episode log** — At session end, the Stop hook extracts a compact episode record (title, asks, branch, files touched) from the session transcript into `{vault}/.spine/episodes/{repo}.md`. Survives transcript rotation. The last 3 episodes are injected at session start for continuity. Controlled by `episodes` flag (default: follows `tier3`).
+- **`/spine-pulse`** — Proactive stale-WIP reminders. A deterministic scanner watches all your repos for unmerged branches and abandoned sessions idle beyond a threshold, recaps each from episode logs ("you were doing X on branch Y, left off at Z"), and reminds you two ways: a session-start banner in any repo, and an optional daily macOS notification via launchd. Snooze, ignore lists, and an abandonment horizon keep it from nagging.
 - **Auto-load** — At session start, Spine automatically injects a vault index and retrieval policy so Claude knows what knowledge is available. No manual invocation needed. Controlled by `autoLoad` flag (default: on).
 - **Post-commit hook** — After significant commits (20+ lines, 2+ files), silently tracks them in `pending-commits.json` for later batch capture.
 - **Status line** — Optional bone avatar (`🦴`) showing vault activity in your Claude Code status bar.
@@ -141,6 +142,7 @@ Spine resolves the vault path from:
 | `autoLoad` | `true` | Inject vault index + retrieval policy at session start |
 | `tier3` | `false` | Autonomous loop: silent commit tracking, session-start scan, batch capture |
 | `episodes` | follows `tier3` | Episode extraction at session end + recent-sessions block at session start |
+| `pulse` | `{ "enabled": false }` | Stale-WIP reminders — object with `thresholdDays` (3), `maxAgeDays` (45), `scanRoots` (`["~/Documents/Git"]`), `ignore` (repo names), `ignoreBranches` (globs, default `release/*`, `hotfix/*`) |
 
 ## Repo Structure
 
@@ -154,14 +156,19 @@ spine/
 │   ├── spine-scan/          # Session-start scanner (Tier 3)
 │   ├── spine-update/       # Resume and update existing docs
 │   ├── spine-recall/        # On-demand deep pull from vault
-│   └── spine-sessions/      # Episodic memory search over past sessions
+│   ├── spine-sessions/      # Episodic memory search over past sessions
+│   └── spine-pulse/         # Stale-WIP review, snooze, notifier setup
 ├── hooks/
 │   ├── hooks.json           # SessionStart + PostToolUse + Stop hooks
 │   ├── spine-commit-tracker.sh  # Silent commit tracker
 │   ├── spine-episode-extract.sh # Session-end episode extractor
+│   ├── spine-pulse-scan.sh      # Stale-WIP detector
+│   ├── spine-pulse-banner.sh    # Session-start stale-WIP banner
 │   └── spine-resolve-vault.sh   # Vault path resolver
 ├── templates/               # Vault templates
 ├── scripts/
+│   ├── spine-pulse-notify.sh    # launchd notification runner
+│   ├── spine-pulse-install.sh   # launchd agent install/uninstall
 │   └── statusline-spine.sh  # Optional status line segment
 └── docs/
     ├── conventions.md       # Full naming and tagging reference
@@ -200,6 +207,7 @@ The AI's job: everything else.
 - [x] `/spine-update` — resume and enrich existing spine docs (plans, architecture) after continued work sessions
 - [x] `/spine-recall` — on-demand deep pull from vault + auto-load at session start
 - [x] `/spine-sessions` — episodic memory: session-end episode extraction + deterministic search over past sessions
+- [x] `/spine-pulse` — proactive stale-WIP recap + reminders (session-start banner + daily macOS notification)
 - [ ] `/spine-dream` — synthesis curator: derive playbooks/gotchas across docs and episodes (design: `docs/research/2026-07-05-spine-intelligence-upgrades.md`)
 - [ ] `/spine-learn` — mine sessions for repeated patterns and failures into learned rules
 - [ ] `/spine-search` — full-text search across the vault
