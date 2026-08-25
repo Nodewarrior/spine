@@ -51,6 +51,7 @@ Spine doesn't just store knowledge — it grows itself:
 - **`/spine-recall`** — On-demand deep pull. Loads all vault docs for a feature area into your context when you need full knowledge beyond the auto-loaded index.
 - **`/spine-sessions`** — Episodic memory search. Answers "what did we do / decide / try in a past session?" — greps the episode log first, then drills into raw session transcripts with type-filtered ripgrep. Deterministic, no LLM calls, returns resume commands.
 - **Episode log** — At session end, the Stop hook extracts a compact episode record (title, asks, branch, files touched) from the session transcript into `{vault}/.spine/episodes/{repo}.md`. Survives transcript rotation. The last 3 episodes are injected at session start for continuity. Controlled by `episodes` flag (default: follows `tier3`).
+- **`/spine-dream`** — Synthesis curator. Reads accumulated update sections, episodes, and sibling docs, derives NEW knowledge — reusable playbooks and gotcha docs (`type/derived`) — with every claim wikilinked to its evidence and verified against source before landing. Human-gated (Save/Edit/Skip), audit trail in `.spine/DREAMS.md`. Memory that compounds instead of piling up.
 - **`/spine-pulse`** — Proactive stale-WIP reminders. A deterministic scanner watches all your repos for unmerged branches and abandoned sessions idle beyond a threshold, recaps each from episode logs ("you were doing X on branch Y, left off at Z"), and reminds you two ways: a session-start banner in any repo, and an optional daily macOS notification via launchd. Snooze, ignore lists, and an abandonment horizon keep it from nagging.
 - **Auto-load** — At session start, Spine automatically injects a vault index and retrieval policy so Claude knows what knowledge is available. No manual invocation needed. Controlled by `autoLoad` flag (default: on).
 - **Post-commit hook** — After significant commits (20+ lines, 2+ files), silently tracks them in `pending-commits.json` for later batch capture.
@@ -113,6 +114,7 @@ Spine tags every doc with a `type/*` frontmatter tag. Obsidian's graph view rend
 | Purple | `type/architecture` | Architecture docs |
 | Orange | `type/plan` | Implementation plans |
 | Yellow | `type/decision` | Decision records |
+| Pink | `type/derived` | Derived playbooks/gotchas (written by /spine-dream) |
 | Grey | `type/meta` | Spine Architecture meta doc |
 
 The color config is set up automatically by `/spine-init`.
@@ -208,7 +210,7 @@ The AI's job: everything else.
 - [x] `/spine-recall` — on-demand deep pull from vault + auto-load at session start
 - [x] `/spine-sessions` — episodic memory: session-end episode extraction + deterministic search over past sessions
 - [x] `/spine-pulse` — proactive stale-WIP recap + reminders (session-start banner + daily macOS notification)
-- [ ] `/spine-dream` — synthesis curator: derive playbooks/gotchas across docs and episodes (design: `docs/research/2026-07-05-spine-intelligence-upgrades.md`)
+- [x] `/spine-dream` — synthesis curator: derives playbooks/gotchas across docs and episodes, evidence-pointed and human-gated
 - [ ] `/spine-learn` — mine sessions for repeated patterns and failures into learned rules
 - [ ] `/spine-search` — full-text search across the vault
 - [ ] Cross-vault discovery — find related concepts across multiple vaults

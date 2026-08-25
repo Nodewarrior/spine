@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0 (2026-08-25)
+
+Spine Dream — the synthesis curator. Spine now derives knowledge instead of only storing it.
+
+### New Skills
+- `/spine-dream` — reads living docs' update sections, curator-log entries, episode logs, and sibling docs, then derives candidate lessons (gotchas, rules, playbooks, contradictions). Every claim carries source quotes + `derived_from:` wikilinks, is verified against source before presentation (drop-if-unsupported, `stated` vs `inferred` confidence), and lands only after Save/Edit/Skip review. Output: one `type/derived` playbook doc per feature area, a `DREAMS.md` audit diary in `.spine/`, and a curator-log entry.
+
+### New Conventions
+- `type/derived` doc tag (pink in graph colors) with `derived_from:` frontmatter wikilink list.
+
+
 ## 0.6.0 (2026-07-12)
 
 Spine Pulse — proactive stale-WIP recap and reminders. Spine now comes to find you.
