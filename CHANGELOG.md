@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.7.0 (2026-08-25)
+
+Spine Dream — the synthesis curator. Spine now derives knowledge instead of only storing it.
+
+### New Skills
+- `/spine-dream` — reads living docs' update sections, curator-log entries, episode logs, and sibling docs, then derives candidate lessons (gotchas, rules, playbooks, contradictions). Every claim carries source quotes + `derived_from:` wikilinks, is verified against source before presentation (drop-if-unsupported, `stated` vs `inferred` confidence), and lands only after Save/Edit/Skip review. Output: one `type/derived` playbook doc per feature area, a `DREAMS.md` audit diary in `.spine/`, and a curator-log entry.
+
+### New Conventions
+- `type/derived` doc tag (pink in graph colors) with `derived_from:` frontmatter wikilink list.
+
+
+## 0.6.0 (2026-07-12)
+
+Spine Pulse — proactive stale-WIP recap and reminders. Spine now comes to find you.
+
+### New Skills
+- `/spine-pulse` — review stale work items with recaps, snooze nagging items, edit thresholds, install/uninstall the daily macOS notifier.
+
+### New Features
+- **Stale-WIP detector** (`hooks/spine-pulse-scan.sh`) — deterministic scan (no LLM): unmerged branches idle beyond `thresholdDays` (via `git for-each-ref`), plus repos where Claude activity stopped (via `~/.claude/history.jsonl`). Recaps enriched from episode logs (last session title + "left off at" prompt). Writes `{vault}/.spine/pulse.json`. Noise controls: repos with fresh Claude activity are never nagged, `ignoreBranches` globs (default `release/*`, `hotfix/*`), `maxAgeDays` horizon (default 45) stops nagging about abandoned work, per-item snooze via `pulse-ack.json`.
+- **SessionStart banner** (`hooks/spine-pulse-banner.sh`, async) — fires in ANY repo, independent of vault tracking; refreshes the scan when stale (>20h) and injects a top-5 stale-items digest with a directive to remind the user once, briefly.
+- **Daily macOS notification** (`scripts/spine-pulse-notify.sh` + `spine-pulse-install.sh`) — launchd agent (`com.spine.pulse`, default 09:00) runs the scan and fires a native notification when stale items exist. No Claude session needed.
+- **`pulse` config object** in `~/.spine/config.json`: `enabled` (default `false`), `thresholdDays` (3), `maxAgeDays` (45), `scanRoots` (`["~/Documents/Git"]`), `ignore`, `ignoreBranches`.
+
 ## 0.5.0 (2026-07-05)
 
 Episodic memory — Spine remembers what happened, not just what was written.
