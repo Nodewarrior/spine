@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0 (2026-09-23)
+
+Compaction checkpoint — session memory now survives mid-session compaction.
+
+### New Features
+- **PreCompact hook** runs the episode extractor right before Claude Code compacts. On the post-compaction `SessionStart` (`source: compact`), the session's own episode (verbatim latest asks, branch, recently touched files) is re-injected as a "Pre-compaction checkpoint" block, clearly marked as quoted data.
+
+### Fixes
+- **Episodes froze after the first turn.** `Stop` fires after every turn, but the extractor skipped any session already recorded, so each episode captured only its first exchange. Episodes are now upserted: the session's record is replaced and moved to the bottom on every turn.
+- **Almost every episode was "untitled".** Transcripts rarely contain an `ai-title` record; the title now falls back to the session's opening ask.
+- Episodes keep the 12 most recent asks and 15 most recently touched files (shown as `folder/file`) instead of the first ones.
+
 ## 0.7.0 (2026-08-25)
 
 Spine Dream — the synthesis curator. Spine now derives knowledge instead of only storing it.
