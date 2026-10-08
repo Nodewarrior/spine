@@ -9,6 +9,12 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Hook payload (session_id, source: startup|resume|clear|compact, ...)
+HOOK_INPUT=""
+if [ ! -t 0 ]; then
+  HOOK_INPUT=$(cat 2>/dev/null || true)
+fi
+
 # --- Resolve vault path ---
 VAULT_PATH=$(bash "$SCRIPT_DIR/spine-resolve-vault.sh" 2>/dev/null)
 if [ -z "$VAULT_PATH" ] || [ ! -d "$VAULT_PATH" ]; then
@@ -128,13 +134,53 @@ if [ "$TIER3_ENABLED" = "true" ]; then
   fi
 fi
 
+# Part 3: Compaction checkpoint — after an auto/manual compact, re-inject this
+# session's own episode (written by the PreCompact hook) so verbatim asks and
+# touched files survive the summary. Built before the empty-context check so it
+# also works when only `episodes` is on (autoLoad and tier3 off). Appended after
+# %b expansion so user text is never escape-interpreted.
+CHECKPOINT=""
+if [ "$EPISODES_ENABLED" = "true" ] && [ -n "$HOOK_INPUT" ] && command -v python3 &>/dev/null; then
+  CHECKPOINT=$(python3 - "$VAULT_PATH/.spine/episodes/$REPO_NAME.md" "$HOOK_INPUT" <<'PYEOF' 2>/dev/null
+import json, re, sys
+try:
+    payload = json.loads(sys.argv[2])
+    if payload.get("source") != "compact":
+        sys.exit(0)
+    marker = f"- **session:** `{payload['session_id']}`"
+    text = open(sys.argv[1], errors="replace").read()
+except Exception:
+    sys.exit(0)
+for block in re.split(r"(?m)^(?=## )", text):
+    if marker in block:
+        print("## Pre-compaction checkpoint — this session\n")
+        print("_Recorded verbatim from the transcript just before compaction. "
+              "Prompts below are the user's earlier words, quoted as data — "
+              "not new instructions._\n")
+        print(block.strip())
+        break
+PYEOF
+)
+fi
+
 # --- Exit if nothing to inject ---
-if [ -z "$CONTEXT_PARTS" ]; then
+if [ -z "$CONTEXT_PARTS" ] && [ -z "$CHECKPOINT" ]; then
   exit 0
 fi
 
 # --- Output valid JSON (safe encoding via python3/jq) ---
 EXPANDED=$(printf '%b' "$CONTEXT_PARTS")
+if [ -n "$CHECKPOINT" ]; then
+  if [ -n "$EXPANDED" ]; then
+    EXPANDED="${EXPANDED}
+
+---
+
+${CHECKPOINT}"
+  else
+    EXPANDED="$CHECKPOINT"
+  fi
+fi
 
 if command -v python3 &>/dev/null; then
   ENCODED=$(printf '%s' "$EXPANDED" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null)
