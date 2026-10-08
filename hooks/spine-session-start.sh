@@ -134,18 +134,12 @@ if [ "$TIER3_ENABLED" = "true" ]; then
   fi
 fi
 
-# --- Exit if nothing to inject ---
-if [ -z "$CONTEXT_PARTS" ]; then
-  exit 0
-fi
-
-# --- Output valid JSON (safe encoding via python3/jq) ---
-EXPANDED=$(printf '%b' "$CONTEXT_PARTS")
-
 # Part 3: Compaction checkpoint — after an auto/manual compact, re-inject this
 # session's own episode (written by the PreCompact hook) so verbatim asks and
-# touched files survive the summary. Appended after %b expansion so user text
-# is never escape-interpreted.
+# touched files survive the summary. Built before the empty-context check so it
+# also works when only `episodes` is on (autoLoad and tier3 off). Appended after
+# %b expansion so user text is never escape-interpreted.
+CHECKPOINT=""
 if [ "$EPISODES_ENABLED" = "true" ] && [ -n "$HOOK_INPUT" ] && command -v python3 &>/dev/null; then
   CHECKPOINT=$(python3 - "$VAULT_PATH/.spine/episodes/$REPO_NAME.md" "$HOOK_INPUT" <<'PYEOF' 2>/dev/null
 import json, re, sys
@@ -167,12 +161,24 @@ for block in re.split(r"(?m)^(?=## )", text):
         break
 PYEOF
 )
-  if [ -n "$CHECKPOINT" ]; then
+fi
+
+# --- Exit if nothing to inject ---
+if [ -z "$CONTEXT_PARTS" ] && [ -z "$CHECKPOINT" ]; then
+  exit 0
+fi
+
+# --- Output valid JSON (safe encoding via python3/jq) ---
+EXPANDED=$(printf '%b' "$CONTEXT_PARTS")
+if [ -n "$CHECKPOINT" ]; then
+  if [ -n "$EXPANDED" ]; then
     EXPANDED="${EXPANDED}
 
 ---
 
 ${CHECKPOINT}"
+  else
+    EXPANDED="$CHECKPOINT"
   fi
 fi
 

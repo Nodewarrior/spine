@@ -56,7 +56,7 @@ mkdir -p "$EPISODES_DIR" 2>/dev/null || exit 0
 # --- Extract episode from transcript and append ---
 # Payload passed as argv (heredoc occupies stdin for the script body).
 python3 - "$EPISODES_DIR/$REPO_NAME.md" "$PAYLOAD" <<'PYEOF' 2>/dev/null
-import json, sys, os, re, datetime, collections
+import json, sys, os, re, datetime, collections, fcntl, tempfile
 
 MAX_PROMPTS = 12          # most recent human prompts kept per episode
 MAX_PROMPT_CHARS = 200    # truncation per prompt
@@ -149,20 +149,30 @@ def main():
             lines.append(f"  - {p}")
     lines.append("")
 
-    # Upsert: drop this session's previous record, append the fresh one.
-    # ponytail: no file lock — two sessions of the same repo stopping in the
-    # same instant can lose one update; the next Stop rewrites it anyway.
-    if os.path.isfile(out_path):
-        with open(out_path, "r", errors="replace") as f:
-            existing = f.read()
-    else:
-        existing = "# Episodes — session memory\n\n<!-- Upserted by spine-episode-extract.sh after each turn and before compaction. Newest at bottom. -->\n"
-    blocks = re.split(r"(?m)^(?=## )", existing)
-    kept = "".join(b for b in blocks if marker not in b).rstrip("\n")
-    tmp = out_path + ".tmp"
-    with open(tmp, "w") as f:
-        f.write(kept + "\n\n" + "\n".join(lines) + "\n")
-    os.replace(tmp, out_path)
+    # Upsert: drop this session's previous record, append the fresh one. Sessions of one
+    # repo share this log, so the whole read-modify-write runs under an exclusive lock
+    # (blocks until it is free; the hook is deterministic and quick) and the new content
+    # goes through a unique temp file in the same folder, then an atomic replace.
+    header = ("# Episodes — session memory\n\n<!-- Upserted by spine-episode-extract.sh after each turn "
+              "and before compaction. Newest at bottom. -->\n")
+    with open(out_path + ".lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            with open(out_path, "r", errors="replace") as f:
+                existing = f.read()
+        except FileNotFoundError:
+            existing = header
+        blocks = re.split(r"(?m)^(?=## )", existing)
+        kept = "".join(b for b in blocks if marker not in b).rstrip("\n")
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(out_path), prefix=".episode-", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(kept + "\n\n" + "\n".join(lines) + "\n")
+            os.replace(tmp, out_path)
+        except BaseException:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+            raise
 
 main()
 PYEOF

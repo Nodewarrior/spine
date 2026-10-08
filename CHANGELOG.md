@@ -11,6 +11,8 @@ Compaction checkpoint — session memory now survives mid-session compaction.
 - **Episodes froze after the first turn.** `Stop` fires after every turn, but the extractor skipped any session already recorded, so each episode captured only its first exchange. Episodes are now upserted: the session's record is replaced and moved to the bottom on every turn.
 - **Almost every episode was "untitled".** Transcripts rarely contain an `ai-title` record; the title now falls back to the session's opening ask.
 - Episodes keep the 12 most recent asks and 15 most recently touched files (shown as `folder/file`) instead of the first ones.
+- Sessions of one repo no longer lose each other's episodes when they stop or compact at the same moment: the upsert runs under a per-log lock and writes through a unique temp file.
+- The compaction checkpoint now also works when only `episodes` is enabled (`autoLoad` and `tier3` off); the empty-context check used to exit before it.
 
 ## 0.7.0 (2026-08-25)
 
