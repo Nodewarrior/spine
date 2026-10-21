@@ -53,6 +53,7 @@ Spine doesn't just store knowledge — it grows itself:
 - **Episode log** — After every turn, the Stop hook upserts a compact episode record (title, latest asks, branch, recently touched files) from the session transcript into `{vault}/.spine/episodes/{repo}.md`, one record per session. Survives transcript rotation. The last 3 episodes are injected at session start for continuity.
 - **Compaction checkpoint** — A PreCompact hook refreshes the session's episode just before Claude Code compacts, and the post-compaction SessionStart re-injects it, so your verbatim asks and touched files survive the summary. Controlled by `episodes` flag (default: follows `tier3`).
 - **`/spine-dream`** — Synthesis curator. Reads accumulated update sections, episodes, and sibling docs, derives NEW knowledge — reusable playbooks and gotcha docs (`type/derived`) — with every claim wikilinked to its evidence and verified against source before landing. Human-gated (Save/Edit/Skip), audit trail in `.spine/DREAMS.md`. Memory that compounds instead of piling up.
+- **`/spine-team`** — Team board for all live Claude Code sessions on your machine: what each one is working on (repo, branch, last ask, files), which ones overlap right now (same checkout, same branch, same files), and which are stale. Ask any session for a status update. Read-only, deterministic, local.
 - **`/spine-pulse`** — Proactive stale-WIP reminders. A deterministic scanner watches all your repos for unmerged branches and abandoned sessions idle beyond a threshold, recaps each from episode logs ("you were doing X on branch Y, left off at Z"), and reminds you two ways: a session-start banner in any repo, and an optional daily macOS notification via launchd. Snooze, ignore lists, and an abandonment horizon keep it from nagging.
 - **Auto-load** — At session start, Spine automatically injects a vault index and retrieval policy so Claude knows what knowledge is available. No manual invocation needed. Controlled by `autoLoad` flag (default: on).
 - **Post-commit hook** — After significant commits (20+ lines, 2+ files), silently tracks them in `pending-commits.json` for later batch capture.
@@ -160,7 +161,8 @@ spine/
 │   ├── spine-update/       # Resume and update existing docs
 │   ├── spine-recall/        # On-demand deep pull from vault
 │   ├── spine-sessions/      # Episodic memory search over past sessions
-│   └── spine-pulse/         # Stale-WIP review, snooze, notifier setup
+│   ├── spine-pulse/         # Stale-WIP review, snooze, notifier setup
+│   └── spine-team/          # Board of all live sessions, overlaps, status asks
 ├── hooks/
 │   ├── hooks.json           # SessionStart + PostToolUse + Stop + PreCompact hooks
 │   ├── spine-commit-tracker.sh  # Silent commit tracker

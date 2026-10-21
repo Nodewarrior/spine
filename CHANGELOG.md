@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0 (2026-10-05)
+
+Spine Team — one board for every live Claude Code session.
+
+### New Skills
+- `/spine-team` — joins Claude Code's live session registry (`~/.claude/sessions/*.json`) with Spine's per-turn episode records to show every running session's repo, branch, last ask and recent files. Flags overlaps only between sessions active at the same time (same checkout, same branch in another worktree, same files) and sessions idle for more than a day. `/spine-team ask <name>` sends a session a fixed, read-only status request. Deterministic (`scripts/spine-team-board.py`, stdlib only); never opens the registry's `*.key` files.
+
 ## 0.8.0 (2026-09-23)
 
 Compaction checkpoint — session memory now survives mid-session compaction.
