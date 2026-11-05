@@ -50,7 +50,8 @@ Spine doesn't just store knowledge — it grows itself:
 - **`/spine-update`** — Resume and enrich existing docs after continued work sessions. Detects stale docs or targets a specific note, then appends a timestamped update with git changes and session context. Your docs evolve with your code.
 - **`/spine-recall`** — On-demand deep pull. Loads all vault docs for a feature area into your context when you need full knowledge beyond the auto-loaded index.
 - **`/spine-sessions`** — Episodic memory search. Answers "what did we do / decide / try in a past session?" — greps the episode log first, then drills into raw session transcripts with type-filtered ripgrep. Deterministic, no LLM calls, returns resume commands.
-- **Episode log** — At session end, the Stop hook extracts a compact episode record (title, asks, branch, files touched) from the session transcript into `{vault}/.spine/episodes/{repo}.md`. Survives transcript rotation. The last 3 episodes are injected at session start for continuity. Controlled by `episodes` flag (default: follows `tier3`).
+- **Episode log** — After every turn, the Stop hook upserts a compact episode record (title, latest asks, branch, recently touched files) from the session transcript into `{vault}/.spine/episodes/{repo}.md`, one record per session. Survives transcript rotation. The last 3 episodes are injected at session start for continuity.
+- **Compaction checkpoint** — A PreCompact hook refreshes the session's episode just before Claude Code compacts, and the post-compaction SessionStart re-injects it, so your verbatim asks and touched files survive the summary. Controlled by `episodes` flag (default: follows `tier3`).
 - **`/spine-dream`** — Synthesis curator. Reads accumulated update sections, episodes, and sibling docs, derives NEW knowledge — reusable playbooks and gotcha docs (`type/derived`) — with every claim wikilinked to its evidence and verified against source before landing. Human-gated (Save/Edit/Skip), audit trail in `.spine/DREAMS.md`. Memory that compounds instead of piling up.
 - **`/spine-pulse`** — Proactive stale-WIP reminders. A deterministic scanner watches all your repos for unmerged branches and abandoned sessions idle beyond a threshold, recaps each from episode logs ("you were doing X on branch Y, left off at Z"), and reminds you two ways: a session-start banner in any repo, and an optional daily macOS notification via launchd. Snooze, ignore lists, and an abandonment horizon keep it from nagging.
 - **Auto-load** — At session start, Spine automatically injects a vault index and retrieval policy so Claude knows what knowledge is available. No manual invocation needed. Controlled by `autoLoad` flag (default: on).
@@ -143,7 +144,7 @@ Spine resolves the vault path from:
 |------|---------|------------------|
 | `autoLoad` | `true` | Inject vault index + retrieval policy at session start |
 | `tier3` | `false` | Autonomous loop: silent commit tracking, session-start scan, batch capture |
-| `episodes` | follows `tier3` | Episode extraction at session end + recent-sessions block at session start |
+| `episodes` | follows `tier3` | Episode upsert after each turn, compaction checkpoint, recent-sessions block at session start |
 | `pulse` | `{ "enabled": false }` | Stale-WIP reminders — object with `thresholdDays` (3), `maxAgeDays` (45), `scanRoots` (`["~/Documents/Git"]`), `ignore` (repo names), `ignoreBranches` (globs, default `release/*`, `hotfix/*`) |
 
 ## Repo Structure
@@ -161,9 +162,9 @@ spine/
 │   ├── spine-sessions/      # Episodic memory search over past sessions
 │   └── spine-pulse/         # Stale-WIP review, snooze, notifier setup
 ├── hooks/
-│   ├── hooks.json           # SessionStart + PostToolUse + Stop hooks
+│   ├── hooks.json           # SessionStart + PostToolUse + Stop + PreCompact hooks
 │   ├── spine-commit-tracker.sh  # Silent commit tracker
-│   ├── spine-episode-extract.sh # Session-end episode extractor
+│   ├── spine-episode-extract.sh # Episode extractor (Stop + PreCompact)
 │   ├── spine-pulse-scan.sh      # Stale-WIP detector
 │   ├── spine-pulse-banner.sh    # Session-start stale-WIP banner
 │   └── spine-resolve-vault.sh   # Vault path resolver
