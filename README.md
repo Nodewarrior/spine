@@ -54,6 +54,7 @@ Spine doesn't just store knowledge — it grows itself:
 - **Compaction checkpoint** — A PreCompact hook refreshes the session's episode just before Claude Code compacts, and the post-compaction SessionStart re-injects it, so your verbatim asks and touched files survive the summary. Controlled by `episodes` flag (default: follows `tier3`).
 - **`/spine-dream`** — Synthesis curator. Reads accumulated update sections, episodes, and sibling docs, derives NEW knowledge — reusable playbooks and gotcha docs (`type/derived`) — with every claim wikilinked to its evidence and verified against source before landing. Human-gated (Save/Edit/Skip), audit trail in `.spine/DREAMS.md`. Memory that compounds instead of piling up.
 - **`/spine-pulse`** — Proactive stale-WIP reminders. A deterministic scanner watches all your repos for unmerged branches and abandoned sessions idle beyond a threshold, recaps each from episode logs ("you were doing X on branch Y, left off at Z"), and reminds you two ways: a session-start banner in any repo, and an optional daily macOS notification via launchd. Snooze, ignore lists, and an abandonment horizon keep it from nagging.
+- **Edit-time rules** — Each spine note can hold a short `## Rules` section (stable always/never rules, each traced to an incident). When Claude reads a file listed in a note's `**Files changed:**`, Spine shows that note's rules; if Claude tries to edit such a file before seeing them, the first edit is blocked once with the rules as the reason, and the retry goes through. Once per note per session, silent when nothing matches, about 50 ms. A note's file list can name other repos (`api-server:Api/Pay.cs`) and globs (`src/pay/**`). Controlled by the `editRules` flag (default: on).
 - **Auto-load** — At session start, Spine automatically injects a vault index and retrieval policy so Claude knows what knowledge is available. No manual invocation needed. Controlled by `autoLoad` flag (default: on).
 - **Post-commit hook** — After significant commits (20+ lines, 2+ files), silently tracks them in `pending-commits.json` for later batch capture.
 - **Status line** — Optional bone avatar (`🦴`) showing vault activity in your Claude Code status bar.
@@ -145,6 +146,7 @@ Spine resolves the vault path from:
 | `autoLoad` | `true` | Inject vault index + retrieval policy at session start |
 | `tier3` | `false` | Autonomous loop: silent commit tracking, session-start scan, batch capture |
 | `episodes` | follows `tier3` | Episode upsert after each turn, compaction checkpoint, recent-sessions block at session start |
+| `editRules` | `true` | Show a note's `## Rules` when Claude reads or edits a file the note lists (index: `~/.spine/rules-index.tsv`, rebuilt when a note changes) |
 | `pulse` | `{ "enabled": false }` | Stale-WIP reminders — object with `thresholdDays` (3), `maxAgeDays` (45), `scanRoots` (`["~/Documents/Git"]`), `ignore` (repo names), `ignoreBranches` (globs, default `release/*`, `hotfix/*`) |
 
 ## Repo Structure
@@ -162,7 +164,9 @@ spine/
 │   ├── spine-sessions/      # Episodic memory search over past sessions
 │   └── spine-pulse/         # Stale-WIP review, snooze, notifier setup
 ├── hooks/
-│   ├── hooks.json           # SessionStart + PostToolUse + Stop + PreCompact hooks
+│   ├── hooks.json           # SessionStart + PreToolUse + PostToolUse + Stop + PreCompact hooks
+│   ├── spine-rules.sh           # Edit-time rules (Read: show, Edit/Write: block once)
+│   ├── spine-rules-index.sh     # Builds the file → rules index
 │   ├── spine-commit-tracker.sh  # Silent commit tracker
 │   ├── spine-episode-extract.sh # Episode extractor (Stop + PreCompact)
 │   ├── spine-pulse-scan.sh      # Stale-WIP detector

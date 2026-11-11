@@ -101,7 +101,7 @@ around the scheduled time.
 spine_pulse_result:
   status: success | clean | disabled | error
   mode: review | snooze | config | install | uninstall
-  summary: "2 stale items — spine feat/episodic-memory 7d, len-lcw-be 10d"
+  summary: "2 stale items — spine feat/episodic-memory 7d, api-server 10d"
   items:
     - { repo: "spine", branch: "feat/episodic-memory", days_idle: 7, kind: "branch" }
   next_actions:

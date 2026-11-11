@@ -15,6 +15,13 @@ if [ ! -t 0 ]; then
   HOOK_INPUT=$(cat 2>/dev/null || true)
 fi
 
+# Edit-time rules (spine-rules.sh): compact/clear drops the shown rules from context, so forget
+# what this session (and its subagents) were shown and let the rules show again.
+if [[ "$HOOK_INPUT" =~ \"source\"[[:space:]]*:[[:space:]]*\"(compact|clear)\" ]] &&
+   [[ "$HOOK_INPUT" =~ \"session_id\"[[:space:]]*:[[:space:]]*\"([A-Za-z0-9_-]+)\" ]]; then
+  rm -f "${TMPDIR:-/tmp}/spine-rules/${BASH_REMATCH[1]}" "${TMPDIR:-/tmp}/spine-rules/${BASH_REMATCH[1]}".*
+fi
+
 # --- Resolve vault path ---
 VAULT_PATH=$(bash "$SCRIPT_DIR/spine-resolve-vault.sh" 2>/dev/null)
 if [ -z "$VAULT_PATH" ] || [ ! -d "$VAULT_PATH" ]; then
@@ -26,7 +33,14 @@ REPO_NAME=$(basename "$(git remote get-url origin 2>/dev/null)" .git 2>/dev/null
 if [ -z "$REPO_NAME" ]; then
   REPO_NAME=$(basename "$(pwd)")
 fi
-if [ ! -d "$VAULT_PATH/$REPO_NAME" ]; then
+# Vault folder: the remote name, else the main checkout's folder name (remote acme-web-app,
+# vault folder myapp). Episodes stay keyed by REPO_NAME, which is how the extractor names them.
+COMMON=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+VAULT_REPO=""
+for CAND in "$REPO_NAME" "$(basename "${COMMON%/.git}" 2>/dev/null)"; do
+  if [ -n "$CAND" ] && [ -d "$VAULT_PATH/$CAND" ]; then VAULT_REPO="$CAND"; break; fi
+done
+if [ -z "$VAULT_REPO" ]; then
   exit 0
 fi
 
@@ -79,8 +93,8 @@ CONTEXT_PARTS=""
 
 # Part 1: Auto-load vault index + retrieval policy
 if [ "$AUTOLOAD_ENABLED" = "true" ]; then
-  REPO_DIR="$VAULT_PATH/$REPO_NAME"
-  INDEX="## Spine Vault Index — $REPO_NAME\n\n"
+  REPO_DIR="$VAULT_PATH/$VAULT_REPO"
+  INDEX="## Spine Vault Index — $VAULT_REPO\n\n"
   INDEX="${INDEX}Features documented in this repo's vault:\n\n"
 
   FOUND_NOTES=0
