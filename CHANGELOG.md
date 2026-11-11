@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0 (2026-11-10)
+
+Edit-time rules — the vault's rules now reach Claude at the moment of a change, not only at session start.
+
+### New Features
+- **`## Rules` section** in the spine note template: short, stable always/never rules, each traced to an incident. The only section edited in place; everything else stays append-only.
+- **Edit-time rules hook** (`hooks/spine-rules.sh`). `PostToolUse(Read)` on a file listed in a note's `**Files changed:**` injects that note's `## Rules`. `PreToolUse(Edit|Write)` on such a file, when the rules were not shown yet, denies the first edit with the rules as the reason; the retry passes. (`PreToolUse` `additionalContext` arrives only after the tool runs, so it would come too late.) Once per note per session; silent on no match; about 50 ms on the no-match path. Opt out with `editRules: false`.
+- **Rules index** (`hooks/spine-rules-index.sh` → `~/.spine/rules-index.tsv`), rebuilt by the hook whenever a note is newer than the index, so hand edits count at once. Leaf docs without rules map their files to the feature hub. Entries can name another repo (`api-server:Api/Pay.cs`) and globs. Repos resolve through the origin remote, the checkout folder name (worktrees and renamed remotes), and vault symlink aliases.
+- `spine-update` proposes new rules and refreshes the hub's `**Files changed:**` from the session's commits; `spine-dream` proposes derived rules into `## Rules` with the playbook as evidence; `spine-recall` shows `## Rules` first.
+- `tests/test-edit-rules.sh` self-check.
+
+### Fixes
+- **Session start found no vault folder when the remote name differs from it.** The hook now falls back to the main checkout's folder name (remote `acme-web-app`, vault folder `myapp`), the same as the edit-time hook. Episodes stay keyed by the remote name.
+
 ## 0.8.0 (2026-09-23)
 
 Compaction checkpoint — session memory now survives mid-session compaction.

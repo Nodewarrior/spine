@@ -110,6 +110,10 @@ For each approved doc:
    ...
    ```
 2. Add a `[[wikilink]]` to the derived doc in the feature's spine note under a **Derived** section.
+   For each approved **Rule**, also propose it for the spine note's `## Rules` (one short line,
+   evidence: `[[Derived - {Topic} Playbook]]`), with the same Save/Edit/Skip gate. The playbook
+   alone is invisible during edits; `## Rules` is what Spine shows when Claude touches the
+   feature's files. Skip rules already present there.
 3. Append to `{vault}/.spine/DREAMS.md` (create if missing) — newest at top:
    ```markdown
    ## {YYYY-MM-DD} — Dream

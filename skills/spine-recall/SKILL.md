@@ -56,6 +56,7 @@ Match `$ARGUMENTS` against content in `{vault}/{repo}/` using this precedence (f
 
 Once the feature is resolved, read ALL `.md` files in that feature folder:
 
+0. If the spine note has a `## Rules` section, show it FIRST, under `━━━ Rules: {feature} ━━━`, before any doc
 1. Read the **spine note** (hub) first — the file tagged `type/spine`
 2. Read each child doc referenced via `[[wikilinks]]` in the spine note
 3. Read any remaining `.md` files in the folder not yet loaded

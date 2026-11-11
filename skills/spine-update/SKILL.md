@@ -113,7 +113,12 @@ Draft an update section to append to the existing doc:
 
 **Merge rules — follow these strictly:**
 - Do NOT create a new `## See Also` section in the update block. Instead, note any new `[[wikilinks]]` to be inserted into the existing `## See Also` section at the bottom of the doc. If no `## See Also` section exists yet, one will be created at the very end of the doc in Step 6.
-- Do NOT add a `**Files changed:**` block in the update section. The original `**Files changed:**` in the doc header is the canonical list and stays unchanged. Only include `**New files:**` if the work introduced source files not in the original list.
+- Do NOT add a `**Files changed:**` block in the update section. The `**Files changed:**` list in the doc header is the canonical list. Only include `**New files:**` if the work introduced source files not in the original list.
+- `## Rules` is the ONLY section edited in place. Everything else stays append-only.
+
+**Rules and Files changed (spine notes) — propose both with the draft:**
+- **Rules:** if this session taught a stable always/never rule (a regression, a repeated error, a trap), propose it as one short line for the hub's `## Rules`, naming the incident (PR, ticket, or `[[doc]]`). Propose; never add a rule the user did not approve. Create `## Rules` right after the title if the hub has none.
+- **Files changed:** refresh the hub's `**Files changed:**` list from the session's commits (`git log --name-only` over them). Add source files the feature owns; skip lockfiles and generated files. Use a glob (`src/checkout/**`) when a folder is wholly owned. Prefix a file in another repo with that repo's vault folder name: `` `api-server:Api/Pay.cs` ``. Never remove entries without asking. Spine's edit-time hook uses this list to show `## Rules` when Claude reads or edits these files.
 - Update header includes time (`HH:MM`) to disambiguate multiple updates on the same calendar day.
 
 ### Step 5: Present for Review

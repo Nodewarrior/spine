@@ -73,7 +73,7 @@ answers:
 > [!bug|note|tip] {One-line summary}
 > {2-3 sentence description of what happened / what was built}
 
-**Files changed:** {list of key files}
+**Files changed:** {key files, each in backticks, e.g. `src/auth/session.ts`; a file in another repo as `api-server:Api/Pay.cs`}
 
 ---
 
